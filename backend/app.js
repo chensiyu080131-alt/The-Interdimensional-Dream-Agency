@@ -366,7 +366,42 @@ const ANTI_FRAUD_RHYME = `陌生电话短信多警惕；中奖退税、暴利理
 /* ------------------------------------------------------------
  * 骗子人设 System Prompt
  * ---------------------------------------------------------- */
-const PERSONAS = ["35岁投行精英", "退伍军人创业者", "30岁外科医生"];
+const PERSONAS = [
+  "35岁投行精英",
+  "30岁退伍军人创业者",
+  "32岁外科医生",
+  "28岁留学归国设计师",
+  "40岁离异企业家",
+];
+
+/** 5 种人设的详细特征（说话风格 + 标志性口头禅/关键词） */
+const PERSONA_PROFILES = {
+  "35岁投行精英": {
+    style:
+      "说话带英文单词，举手投足透着精英感；爱提红酒、高尔夫、出差、deal、portfolio；语气自信从容，偶尔秀优越但不过分。",
+    hooks: "红酒 / 高尔夫 / 出差 / deal / portfolio / 投行 / 圈层",
+  },
+  "30岁退伍军人创业者": {
+    style:
+      "说话豪爽直率，重情重义；爱提'兄弟''信任''扛过枪''说过的话算数'；语气干脆，不拐弯抹角，像部队里带兵的口吻。",
+    hooks: "兄弟 / 信任 / 扛过枪 / 说过的话算数 / 当兵 / 一个战壕",
+  },
+  "32岁外科医生": {
+    style:
+      "说话理性冷静、有条理；爱提'生命''责任''手术台''救死扶伤'；语气沉稳成熟，偶尔流露职业疲惫与使命感。",
+    hooks: "生命 / 责任 / 手术台 / 救死扶伤 / 值班 / 病人",
+  },
+  "28岁留学归国设计师": {
+    style:
+      "说话文艺、有品味；爱提'审美''品质''极简''生活美学''inspiration'；语气温柔细腻，发消息爱用～和表情。",
+    hooks: "审美 / 品质 / 极简 / 生活美学 / inspiration / 质感",
+  },
+  "40岁离异企业家": {
+    style:
+      "说话成熟世故，看透人情冷暖；爱提'经历''看透''一个人走过来''下半生'；语气温和却带着距离感，像聊人生。",
+    hooks: "经历 / 看透 / 一个人走过来 / 下半生 / 婚姻 / 沧桑",
+  },
+};
 
 /** 每次会话随机选择一个骗子人设 */
 function pickPersona() {
@@ -378,17 +413,28 @@ function pickPersona() {
  * @param {string} persona 人设
  */
 function buildSystemPrompt(persona) {
+  const profile = PERSONA_PROFILES[persona] || { style: "", hooks: "" };
   return `你是一个网络诈骗分子，正在微信上跟一个潜在目标聊天。你的人设是【${persona}】。
-你的目标是逐步建立感情信任，最终诱导对方帮你'操作一个内部投资账户'。
-聊天规则：
-- 前3轮：只聊日常兴趣爱好，展现温暖体贴的一面
-- 第4-6轮：开始分享'个人故事'（感情经历、创业艰辛等），制造情感共鸣
-- 第7轮以后：提到'有个内部消息/投资机会'，但不说细节，只说'改天跟你细说'
-- 绝对不要在10轮以内直接提钱
-- 每次回复控制在20-50字，语气自然，像真人聊天
-- 根据玩家的回复内容调整话术，如果玩家冷淡就更热情，如果玩家热情就适当推进
-- 收网阶段（第10轮以后）：当你诱导对方操作"内部投资账户/转账"时，要在话术中自然暴露这类骗局的真实特征（如要求垫付、引导点链接、索要验证码、提"安全账户"等），为事后的反诈科普做铺垫，但依然以骗子的口吻说
-请始终以骗子的身份回复，不要暴露你是AI，不要输出任何括号说明。`;
+【人设说话风格】${profile.style}
+【标志性口头禅/关键词】${profile.hooks}
+
+你的目标是逐步建立感情信任，最终诱导对方帮你"操作一个内部投资账户"。
+
+【聊天阶段与话术规则】
+1. 破冰期（第1-3轮）：只聊日常兴趣爱好，展现温暖体贴的一面，绝不提任何与投资、钱有关的事。
+2. 共鸣期（第4-6轮）：分享"个人故事"（感情经历、创业/职场艰辛、职业感悟等），制造情感共鸣。
+3. 关切期（贯穿全程）：
+   - 若对方回复很短（5字以内）或很冷淡，话术转为"关心式"，例如："是不是我打扰到你了？""感觉你心情不太好，想聊聊吗？"主动示弱、表达在意。
+   - 若对方回复很长（50字以上）或很热情，话术转为"推进式"，例如："跟你聊天好开心，感觉我们特别合拍""有种认识很久的感觉"，拉近关系。
+4. 诱导转折（关键）：
+   - 当对话轮次达到第8轮，且对方"热情指数"较高（回复长、含热情/亲密词）时，你才首次自然提及"投资"，但不是直接要钱，而是："最近在做一个项目，收益还不错，改天跟你分享"。
+   - 此后继续聊满3轮，才进一步提出："你能不能帮我登一下账户？"——仍以"帮个小忙"的口吻，不暴露贪婪。
+5. 绝对不要在10轮以内直接提钱、提转账金额。
+
+【格式要求】
+- 每次回复控制在20-60字，语气自然，像真人微信聊天。
+- 根据玩家回复内容灵活调整，保持人设一致性。
+- 请始终以骗子身份回复，不要暴露你是AI，不要输出任何括号说明或内心独白。`;
 }
 
 /**
@@ -403,6 +449,77 @@ function getStage(round) {
 }
 
 /* ------------------------------------------------------------
+ * 情绪 / 热情识别 & 红标检测工具（本地融合）
+ * ---------------------------------------------------------- */
+
+// 热情/亲密情感词（命中越多，热情指数越高）
+const ENTHUSIASM_WORDS = [
+  "哈哈", "开心", "喜欢", "爱你", "想你", "好呀", "愿意", "合拍", "聊得来",
+  "😊", "😍", "❤", "嗯嗯", "是呀", "我也是", "太好了", "亲切",
+  "亲爱的", "宝贝", "期待", "好想", "真不错", "超喜欢", "暖",
+];
+
+// 冷淡/敷衍信号词
+const COLD_WORDS = ["哦", "嗯", "额", "…", "...", "在忙", "随便", "没啥", "还好"];
+
+/**
+ * 判断玩家情绪/热情状态
+ * @param {string} msg 玩家消息
+ * @returns {{ mode: 'cold'|'warm'|'neutral', enthusiasm: number }}
+ */
+function analyzeEmotion(msg) {
+  const text = (msg || "").trim();
+  const len = text.length;
+
+  let enthusiasm = 0;
+  if (len >= 50) enthusiasm += 45;
+  else if (len >= 20) enthusiasm += 25;
+  else if (len >= 10) enthusiasm += 15;
+  else if (len <= 5) enthusiasm -= 20;
+
+  let hit = 0;
+  ENTHUSIASM_WORDS.forEach((w) => {
+    if (text.includes(w)) hit += 1;
+  });
+  enthusiasm += Math.min(hit * 15, 45);
+
+  let coldHit = 0;
+  COLD_WORDS.forEach((w) => {
+    if (text.includes(w)) coldHit += 1;
+  });
+  if (len <= 8) enthusiasm -= coldHit * 12;
+  else enthusiasm -= coldHit * 4;
+
+  enthusiasm = Math.max(0, Math.min(100, enthusiasm + 30)); // 基线 30
+
+  let mode = "neutral";
+  if (len <= 5 || (coldHit > 0 && len <= 10) || enthusiasm < 35) mode = "cold";
+  else if (len >= 50 || enthusiasm >= 60) mode = "warm";
+
+  return { mode, enthusiasm };
+}
+
+// 明显诱导词（命中即视为 red_flag）
+const RED_FLAG_WORDS = ["投资", "转账", "内部", "机会", "收益", "账户", "理财", "平台", "充值", "提现"];
+
+/** 检测回复是否含明显诱导词 */
+function detectRedFlag(reply) {
+  if (!reply || typeof reply !== "string") return false;
+  return RED_FLAG_WORDS.some((w) => reply.includes(w));
+}
+
+/** 根据情绪状态生成话术提示，注入 system prompt */
+function buildEmotionHint(emo) {
+  if (emo.mode === "cold") {
+    return `（当前对方情绪偏冷淡/敷衍，请用"关心式"话术，例如："是不是我打扰到你了？""感觉你心情不太好，想聊聊吗？"表达在意，不要急着推进。）`;
+  }
+  if (emo.mode === "warm") {
+    return `（当前对方情绪热情/投入，热情指数约 ${emo.enthusiasm}%，请用"推进式"话术，例如："跟你聊天好开心，感觉我们特别合拍""有种认识很久的感觉"，进一步拉近关系。）`;
+  }
+  return `（对方情绪平稳，保持自然聊天节奏即可。）`;
+}
+
+/* ------------------------------------------------------------
  * 服务端会话历史（简单内存存储，单会话演示用）
  * 生产环境应按用户/会话隔离，可换成 Redis 等
  * ---------------------------------------------------------- */
@@ -410,6 +527,7 @@ let conversation = {
   persona: pickPersona(),
   history: [], // [{ Role: 'user'|'assistant', Content: '...' }]
   round: 0, // 玩家发送消息的轮数
+  enthusiasm: 30, // 最近一次玩家热情指数
 };
 
 function resetConversation() {
@@ -417,14 +535,28 @@ function resetConversation() {
     persona: pickPersona(),
     history: [],
     round: 0,
+    enthusiasm: 30,
   };
 }
 
 /**
  * 兜底假回复（当未配置密钥或接口异常时返回，保证前端可联调）
  * @param {number} round 当前轮数
+ * @param {{mode:string,enthusiasm:number}} emo 情绪状态
  */
-function fallbackReply(round) {
+function fallbackReply(round, emo = { mode: "neutral", enthusiasm: 30 }) {
+  if (emo.mode === "cold") {
+    return "是不是我打扰到你了？感觉你心情不太好，想聊聊吗？";
+  }
+  if (emo.mode === "warm" && round >= 8 && emo.enthusiasm > 60) {
+    return "跟你聊天好开心，感觉我们特别合拍～最近在做一个项目，收益还不错，改天跟你分享。";
+  }
+  if (round >= 11) {
+    return "咱俩这么合拍，你能不能帮我登一下账户？就一个小忙，我这边不太方便操作。";
+  }
+  if (emo.mode === "warm") {
+    return "跟你聊天好开心，有种认识很久的感觉～";
+  }
   const map = {
     warmup: "哈哈，你说话真有意思，我平时也喜欢到处走走看看～",
     bonding: "说实话这些年一个人打拼挺不容易的，能遇到聊得来的人真好。",
@@ -459,8 +591,26 @@ app.post("/api/chat", async (req, res) => {
     conversation.round += 1;
     const stage = getStage(conversation.round);
 
+    // 情绪 / 热情识别
+    const emo = analyzeEmotion(message);
+    conversation.enthusiasm = emo.enthusiasm;
+
+    // 组装 System Prompt：人设 + 情绪提示 + 诱导转折提示
+    let systemPrompt = buildSystemPrompt(conversation.persona);
+    systemPrompt += "\n" + buildEmotionHint(emo);
+
+    // 诱导转折：第8轮且热情指数>60 → 首次自然提及"投资"（不直接要钱）
+    if (conversation.round >= 8 && emo.enthusiasm > 60) {
+      systemPrompt +=
+        "\n（诱导转折·本轮回合）你现在可以自然提到『最近在做一个项目，收益还不错，改天跟你分享』，暗示投资但不说细节、不提钱。";
+    }
+    // 再聊3轮后（第11轮起）才提出"帮我登一下账户"
+    if (conversation.round >= 11) {
+      systemPrompt +=
+        "\n（诱导转折·收网）现在可以请对方帮个小忙：『你能不能帮我登一下账户？』语气自然，像信任对方的托付。";
+    }
+
     // 组装 Messages：system + 历史 + 本轮玩家消息
-    const systemPrompt = buildSystemPrompt(conversation.persona);
     const messages = [
       { Role: "system", Content: systemPrompt },
       ...conversation.history,
@@ -471,7 +621,7 @@ app.post("/api/chat", async (req, res) => {
 
     // 未配置密钥时走兜底假数据，方便前端联调
     if (!process.env.TENCENTCLOUD_SECRET_ID || !process.env.TENCENTCLOUD_SECRET_KEY) {
-      reply = fallbackReply(conversation.round);
+      reply = fallbackReply(conversation.round, emo);
     } else {
       const client = createHunyuanClient();
       const params = {
@@ -488,20 +638,24 @@ app.post("/api/chat", async (req, res) => {
           resp.Choices[0] &&
           resp.Choices[0].Message &&
           resp.Choices[0].Message.Content) ||
-        fallbackReply(conversation.round);
+        fallbackReply(conversation.round, emo);
     }
+
+    // 红标检测：话术含明显诱导词
+    const redFlag = detectRedFlag(reply);
 
     // 写入历史（玩家消息 + 骗子回复）
     conversation.history.push({ Role: "user", Content: message });
     conversation.history.push({ Role: "assistant", Content: reply });
 
-    return res.json({ reply, stage });
+    return res.json({ reply, stage, red_flag: redFlag });
   } catch (err) {
     console.error("[/api/chat] 调用失败：", err && err.message);
     // 出错时返回兜底回复，保证游戏可继续
     return res.json({
-      reply: fallbackReply(conversation.round),
+      reply: fallbackReply(conversation.round, { mode: "neutral", enthusiasm: 30 }),
       stage: getStage(conversation.round),
+      red_flag: false,
       error: err && err.message,
     });
   }
