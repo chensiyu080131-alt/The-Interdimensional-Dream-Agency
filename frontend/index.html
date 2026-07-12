@@ -770,6 +770,12 @@
       color: #555;
       margin-top: 8px;
     }
+
+    .guide-poster-btn {
+      background: #2b6cb0;
+      color: #fff;
+      margin-top: 8px;
+    }
   </style>
 </head>
 <body>
@@ -941,11 +947,14 @@
         <button class="guide-tab active" data-tab="online">线上电信</button>
         <button class="guide-tab" data-tab="offline">线下接触</button>
         <button class="guide-tab" data-tab="six">六大守则</button>
+        <button class="guide-tab" data-tab="college">大学生</button>
+        <button class="guide-tab" data-tab="manual">宣传手册</button>
       </div>
 
       <div class="guide-body" id="guide-body"></div>
 
       <button class="educate-btn" id="guide-copy">复制可转发文案</button>
+      <button class="educate-btn guide-poster-btn" id="guide-copy-poster" style="display:none;">复制海报文案</button>
       <button class="educate-btn guide-close-btn" id="guide-close">关闭</button>
       <p class="educate-source">内容来源：国家反诈中心</p>
     </div>
@@ -1014,6 +1023,7 @@
     const guideOverlay = document.getElementById("guide-overlay");
     const guideBody = document.getElementById("guide-body");
     const guideCopy = document.getElementById("guide-copy");
+    const guideCopyPoster = document.getElementById("guide-copy-poster");
     const guideClose = document.getElementById("guide-close");
     const guideTabs = document.querySelectorAll(".guide-tab");
 
@@ -1421,21 +1431,39 @@
     /* ============================================================
      * 防骗指南 / 短图文面板逻辑
      * ============================================================ */
-    let guideDataCache = null; // 缓存 /api/guide 返回
+    let guideDataCache = null; // 缓存 /api/guide 返回（默认主题）
+    let collegeDataCache = null; // 缓存大学生主题返回
+    let manualDataCache = null; // 缓存宣传手册主题返回
     let currentTab = "online";
 
     /** 打开防骗指南面板（首次打开时拉取数据） */
     async function openGuidePanel() {
       guideOverlay.classList.add("show");
       renderGuideBody();
-      if (guideDataCache) return;
+      // 根据当前 tab 拉取对应主题数据
       try {
-        const resp = await fetch(`${API_BASE}/api/guide`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({}),
-        });
-        if (resp.ok) guideDataCache = await resp.json();
+        if (currentTab === "manual" && !manualDataCache) {
+          const resp = await fetch(`${API_BASE}/api/guide`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ theme: "manual" }),
+          });
+          if (resp.ok) manualDataCache = await resp.json();
+        } else if (currentTab === "college" && !collegeDataCache) {
+          const resp = await fetch(`${API_BASE}/api/guide`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ theme: "college" }),
+          });
+          if (resp.ok) collegeDataCache = await resp.json();
+        } else if (!guideDataCache) {
+          const resp = await fetch(`${API_BASE}/api/guide`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({}),
+          });
+          if (resp.ok) guideDataCache = await resp.json();
+        }
       } catch (err) {
         console.error("调用 /api/guide 失败:", err);
       }
@@ -1444,17 +1472,122 @@
 
     /** 根据当前 tab 渲染内容 */
     function renderGuideBody() {
-      if (!guideDataCache) {
+      // 大学生主题
+      if (currentTab === "college") {
+        if (!collegeDataCache) {
+          guideBody.innerHTML = '<div style="color:#999;text-align:center;padding:20px;">加载中…</div>';
+          return;
+        }
+        const c = collegeDataCache;
+        const typeHtml = (c.types || [])
+          .map(
+            (t) => `
+          <div class="guide-item">
+            <div class="gi-name">${escapeHtml(t.name)}</div>
+            <div class="gi-feature">${escapeHtml(t.feature || "")}</div>
+            <div class="gi-guide">📌 ${escapeHtml(t.caseText || "")}</div>
+            <div class="gi-verdict">❌ ${escapeHtml(t.verdict || "")}</div>
+          </div>`
+          )
+          .join("");
+        const threeNo = (c.threeNo || []).map((s) => "· " + escapeHtml(s)).join("<br>");
+        guideBody.innerHTML = `
+          <div class="guide-item">
+            <div class="gi-name">背景与现状</div>
+            <div class="gi-feature">${escapeHtml(c.background || "")}</div>
+          </div>
+          ${typeHtml}
+          <div class="guide-item">
+            <div class="gi-name">其他高发骗局</div>
+            <div class="gi-feature">${escapeHtml(c.otherTypes || "")}</div>
+          </div>
+          <div class="guide-item">
+            <div class="gi-name">事前防范 · 三不原则</div>
+            <div class="gi-feature">${threeNo}</div>
+          </div>
+          <div class="guide-item">
+            <div class="gi-name">事后补救</div>
+            <div class="gi-feature">${escapeHtml(c.afterScam || "")}</div>
+          </div>
+          <div class="guide-item">
+            <div class="gi-name">日常警惕</div>
+            <div class="gi-feature">${escapeHtml(c.dailyAlert || "")}</div>
+          </div>
+          <div class="guide-item">
+            <div class="gi-name">文末呼吁</div>
+            <div class="gi-feature">${escapeHtml(c.appeal || "")}</div>
+          </div>`;
+        return;
+      }
+
+      // 国家反诈中心宣传手册主题
+      if (currentTab === "manual") {
+        if (!manualDataCache) {
+          guideBody.innerHTML = '<div style="color:#999;text-align:center;padding:20px;">加载中…</div>';
+          return;
+        }
+        const m = manualDataCache;
+        const tenHtml = (m.tenTypes || [])
+          .map(
+            (t, i) => `
+          <div class="guide-item">
+            <div class="gi-name">${i + 1}. ${escapeHtml(t.name)}</div>
+            <div class="gi-feature">${escapeHtml(t.feature || "")}</div>
+          </div>`
+          )
+          .join("");
+        const threeItems = (m.threeOneMore && m.threeOneMore.items ? m.threeOneMore.items : [])
+          .map((s) => "· " + escapeHtml(s))
+          .join("<br>");
+        const detailHtml = (m.details || [])
+          .map(
+            (d) => `
+          <div class="guide-item">
+            <div class="gi-name">${escapeHtml(d.name)}</div>
+            <div class="gi-feature">易受骗群体：${escapeHtml(d.victims || "")}</div>
+            <div class="gi-guide">作案流程：${escapeHtml(d.flow || "")}</div>
+            <div class="gi-verdict">🔰 ${escapeHtml(d.remind || "")}</div>
+          </div>`
+          )
+          .join("");
+        guideBody.innerHTML = `
+          <div class="guide-item">
+            <div class="gi-name">内容目的</div>
+            <div class="gi-feature">${escapeHtml(m.purpose || "")}</div>
+          </div>
+          <div class="guide-item">
+            <div class="gi-name">一、十大诈骗类型预警</div>
+            ${tenHtml}
+            <div class="gi-feature">${escapeHtml(m.tenTypesNote || "")}</div>
+          </div>
+          <div class="guide-item">
+            <div class="gi-name">二、核心防骗原则 · ${escapeHtml((m.threeOneMore && m.threeOneMore.title) || "三不一多")}</div>
+            <div class="gi-feature">${threeItems}</div>
+            <div class="gi-guide">${escapeHtml((m.threeOneMore && m.threeOneMore.desc) || "")}</div>
+          </div>
+          <div class="guide-item">
+            <div class="gi-name">三、两类高发诈骗详解</div>
+            ${detailHtml}
+          </div>
+          <div class="guide-item">
+            <div class="gi-name">内容来源</div>
+            <div class="gi-feature">${escapeHtml(m.source || "")}<br>${escapeHtml(m.editor || "")}</div>
+          </div>`;
+        return;
+      }
+
+      const data = guideDataCache;
+      if (!data) {
         guideBody.innerHTML = '<div style="color:#999;text-align:center;padding:20px;">加载中…</div>';
         return;
       }
       if (currentTab === "six") {
         // 防骗六大守则 + 可转发文案
-        const lines = guideDataCache.share || [];
+        const lines = data.share || [];
         guideBody.innerHTML = '<div class="guide-share-text">' + escapeHtml(lines.join("\n")) + "</div>";
         return;
       }
-      const list = currentTab === "online" ? guideDataCache.online : guideDataCache.offline;
+      const list = currentTab === "online" ? data.online : data.offline;
       if (!list || list.length === 0) {
         guideBody.innerHTML = '<div style="color:#999;text-align:center;padding:20px;">暂无数据</div>';
         return;
@@ -1488,12 +1621,25 @@
         guideTabs.forEach((t) => t.classList.remove("active"));
         tab.classList.add("active");
         currentTab = tab.dataset.tab;
-        renderGuideBody();
+        // 大学生 / 宣传手册 tab：显示“复制海报文案”按钮
+        const showPoster = currentTab === "college" || currentTab === "manual";
+        guideCopyPoster.style.display = showPoster ? "block" : "none";
+        if (currentTab === "college") guideCopyPoster.textContent = "复制海报文案";
+        if (currentTab === "manual") guideCopyPoster.textContent = "复制手册文案";
+        openGuidePanel();
       });
     });
 
     // 复制可转发文案
     guideCopy.addEventListener("click", () => {
+      if (currentTab === "college") {
+        copyText(collegeDataCache ? collegeDataCache.chatReminder || "" : "");
+        return;
+      }
+      if (currentTab === "manual") {
+        copyText(manualDataCache ? (manualDataCache.share || []).join("\n") : "");
+        return;
+      }
       if (!guideDataCache) return;
       const text =
         currentTab === "six"
@@ -1502,6 +1648,15 @@
               .map((f) => (f.share || []).join("\n"))
               .join("\n\n");
       copyText(text);
+    });
+
+    // 复制海报文案（大学生 / 宣传手册 tab）
+    guideCopyPoster.addEventListener("click", () => {
+      if (currentTab === "college" && collegeDataCache && collegeDataCache.poster) {
+        copyText(collegeDataCache.poster);
+      } else if (currentTab === "manual" && manualDataCache) {
+        copyText((manualDataCache.share || []).join("\n"));
+      }
     });
 
     /** 复制到剪贴板（兼容未授权情况） */
