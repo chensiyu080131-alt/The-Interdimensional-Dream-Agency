@@ -1,0 +1,34 @@
+{
+  "envId": "{{envId}}",
+  "framework": {
+    "name": "反诈人生",
+    "plugins": {
+      "backend": {
+        "use": "@cloudbase/framework-plugin-function",
+        "inputs": {
+          "name": "fanzha-backend",
+          "runtime": "Nodejs18.15",
+          "entry": "app.js",
+          "path": "/api",
+          "functionRoot": "backend",
+          "bootStrap": "scf_bootstrap",
+          "installDependency": true,
+          "envVariables": {
+            "PORT": "9000",
+            "TENCENTCLOUD_SECRET_ID": "{{secretId}}",
+            "TENCENTCLOUD_SECRET_KEY": "{{secretKey}}"
+          }
+        }
+      },
+      "frontend": {
+        "use": "@cloudbase/framework-plugin-website",
+        "inputs": {
+          "name": "fanzha-frontend",
+          "buildCommand": "",
+          "outputPath": "frontend",
+          "cloudPath": "/fanzha"
+        }
+      }
+    }
+  }
+}

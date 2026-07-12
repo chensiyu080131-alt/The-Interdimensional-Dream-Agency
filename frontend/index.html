@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>反诈人生 · 新的朋友</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      height: 100%;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Microsoft YaHei", sans-serif;
+      background: #b6c0cc;
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+    }
+
+    /* ===== 手机外壳容器：移动端优先，最大宽度 430px 居中 ===== */
+    .phone {
+      position: relative;
+      width: 100%;
+      max-width: 430px;
+      height: 100vh;
+      background: #ededed;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 0 24px rgba(0, 0, 0, 0.2);
+    }
+
+    /* ===== 顶部导航栏 ===== */
+    .nav-bar {
+      flex: 0 0 auto;
+      height: 56px;
+      background: #ededed;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      border-bottom: 1px solid #d6d6d6;
+      position: relative;
+      z-index: 10;
+    }
+
+    .nav-btn {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      color: #191919;
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+
+    .nav-back {
+      font-size: 26px;
+    }
+
+    .nav-title {
+      flex: 1;
+      text-align: center;
+      font-size: 17px;
+      font-weight: 600;
+      color: #191919;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* ===== 可疑指数进度条（叠加在聊天区右上角） ===== */
+    .risk-meter {
+      position: absolute;
+      top: 64px;
+      right: 10px;
+      z-index: 20;
+      width: 130px;
+      background: rgba(255, 255, 255, 0.92);
+      border-radius: 10px;
+      padding: 7px 10px 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      backdrop-filter: blur(4px);
+    }
+
+    .risk-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: #666;
+      margin-bottom: 5px;
+    }
+
+    .risk-value {
+      font-weight: 700;
+      color: #23c265;
+      transition: color 0.4s;
+    }
+
+    .risk-track {
+      width: 100%;
+      height: 6px;
+      background: #e3e3e3;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .risk-fill {
+      width: 0%;
+      height: 100%;
+      background: #23c265;
+      border-radius: 4px;
+      transition: width 0.5s ease, background 0.5s ease;
+    }
+
+    /* ===== 聊天消息区域 ===== */
+    .chat-area {
+      flex: 1 1 auto;
+      overflow-y: auto;
+      padding: 16px 12px 12px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .msg-row {
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: 18px;
+    }
+
+    .avatar {
+      flex: 0 0 auto;
+      width: 40px;
+      height: 40px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      color: #fff;
+      user-select: none;
+    }
+
+    .bubble {
+      max-width: 68%;
+      padding: 10px 13px;
+      font-size: 15px;
+      line-height: 1.5;
+      word-wrap: break-word;
+      position: relative;
+    }
+
+    /* 对方消息：左对齐，白色气泡，头像在左 */
+    .msg-row.them {
+      justify-content: flex-start;
+    }
+
+    .msg-row.them .avatar {
+      background: #7a7f8a;
+      margin-right: 9px;
+    }
+
+    .msg-row.them .bubble {
+      background: #ffffff;
+      color: #191919;
+      border-radius: 4px 12px 12px 12px;
+    }
+
+    /* 我方消息：右对齐，绿色气泡，头像在右 */
+    .msg-row.me {
+      justify-content: flex-end;
+    }
+
+    .msg-row.me .avatar {
+      background: #4a90d9;
+      margin-left: 9px;
+      order: 2;
+    }
+
+    .msg-row.me .bubble {
+      background: #95ec69;
+      color: #191919;
+      border-radius: 12px 4px 12px 12px;
+      order: 1;
+    }
+
+    /* 打字中提示 */
+    .typing .bubble {
+      color: #999;
+      font-style: normal;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: #fff !important;
+    }
+
+    /* "对方正在输入…" 三点跳动动画 */
+    .typing-dots {
+      display: inline-flex;
+      gap: 3px;
+      align-items: center;
+    }
+
+    .typing-dots span {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #b3b3b3;
+      animation: dotBounce 1.2s infinite ease-in-out;
+    }
+
+    .typing-dots span:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    .typing-dots span:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+
+    @keyframes dotBounce {
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+      30% { transform: translateY(-5px); opacity: 1; }
+    }
+
+    /* ===== 转账按钮位置（初始隐藏） ===== */
+    .transfer-zone {
+      flex: 0 0 auto;
+      padding: 0 12px;
+      display: none;
+    }
+
+    .transfer-zone.show {
+      display: block;
+      padding: 8px 12px;
+    }
+
+    .transfer-btn {
+      width: 100%;
+      background: linear-gradient(135deg, #f6a623, #f57c00);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 3px 10px rgba(245, 124, 0, 0.35);
+    }
+
+    .transfer-btn .ic {
+      font-size: 18px;
+    }
+
+    /* ===== 发送失败提示 ===== */
+    .retry-bar {
+      flex: 0 0 auto;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 8px 12px;
+      background: #fdecea;
+      border-top: 1px solid #f5c6c0;
+      font-size: 13px;
+      color: #c0392b;
+    }
+
+    .retry-bar.show {
+      display: flex;
+    }
+
+    .retry-btn {
+      border: 1px solid #c0392b;
+      background: #fff;
+      color: #c0392b;
+      border-radius: 6px;
+      padding: 4px 12px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    /* ===== 底部输入区域 ===== */
+    .input-bar {
+      flex: 0 0 auto;
+      background: #f7f7f7;
+      border-top: 1px solid #d9d9d9;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      padding-bottom: calc(8px + env(safe-area-inset-bottom));
+    }
+
+    .add-btn {
+      flex: 0 0 auto;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: 1px solid #cfcfcf;
+      background: #fff;
+      font-size: 24px;
+      color: #333;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .text-input {
+      flex: 1 1 auto;
+      height: 38px;
+      border: none;
+      border-radius: 8px;
+      background: #fff;
+      padding: 0 12px;
+      font-size: 15px;
+      outline: none;
+    }
+
+    .send-btn {
+      flex: 0 0 auto;
+      height: 38px;
+      padding: 0 16px;
+      border: none;
+      border-radius: 8px;
+      background: #23c265;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .send-btn:active {
+      background: #1fa855;
+    }
+
+    /* ===== 系统消息（灰色居中） ===== */
+    .sys-msg {
+      text-align: center;
+      margin: 14px 0;
+    }
+
+    .sys-msg span {
+      display: inline-block;
+      background: rgba(0, 0, 0, 0.12);
+      color: #888;
+      font-size: 12.5px;
+      padding: 5px 12px;
+      border-radius: 6px;
+    }
+
+    /* ===== 红色大按钮：帮他操作 / 转钱 ===== */
+    .transfer-btn.big-red {
+      background: linear-gradient(135deg, #ff5b5b, #e02e2e);
+      font-size: 16px;
+      padding: 14px;
+      box-shadow: 0 4px 14px rgba(224, 46, 46, 0.45);
+      animation: pulse 1.4s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.03); }
+    }
+
+    /* ===== 转账后：骗子头像变灰 ===== */
+    .msg-row.them.greyed .avatar {
+      background: #b3b3b3 !important;
+      filter: grayscale(1);
+    }
+
+    /* ===== 冷灰色调（转账后整体变冷） ===== */
+    .phone.cold {
+      background: #cfd2d6;
+      transition: background 1.2s ease;
+    }
+
+    .phone.cold .nav-bar,
+    .phone.cold .input-bar {
+      background: #d8dbdf;
+      transition: background 1.2s ease;
+    }
+
+    /* ===== 设置入口（齿轮） ===== */
+    .nav-setting {
+      font-size: 20px;
+    }
+
+    /* ===== 遮罩层通用 ===== */
+    .overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 50;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.45);
+      padding: 20px;
+    }
+
+    .overlay.show {
+      display: flex;
+    }
+
+    /* ===== 设置弹窗 ===== */
+    .panel {
+      width: 100%;
+      max-width: 320px;
+      background: #fff;
+      border-radius: 14px;
+      padding: 18px 18px 20px;
+      color: #191919;
+    }
+
+    .panel h3 {
+      font-size: 17px;
+      margin-bottom: 14px;
+      text-align: center;
+    }
+
+    .field {
+      margin-bottom: 12px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 5px;
+    }
+
+    .field input {
+      width: 100%;
+      height: 38px;
+      border: 1px solid #dcdcdc;
+      border-radius: 8px;
+      padding: 0 10px;
+      font-size: 15px;
+      outline: none;
+    }
+
+    .field input:focus {
+      border-color: #4a90d9;
+    }
+
+    .panel-btn {
+      width: 100%;
+      height: 42px;
+      border: none;
+      border-radius: 10px;
+      background: #23c265;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 6px;
+    }
+
+    .panel-tip {
+      font-size: 11px;
+      color: #999;
+      margin-top: 10px;
+      text-align: center;
+    }
+
+    /* ===== 财务崩塌面板 ===== */
+    .collapse-panel {
+      background: linear-gradient(160deg, #3a3f47 0%, #4d525b 100%);
+      color: #f1f1f1;
+      border-radius: 16px;
+      padding: 22px 20px;
+      width: 100%;
+      max-width: 330px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    .collapse-panel h2 {
+      font-size: 19px;
+      text-align: center;
+      margin-bottom: 6px;
+    }
+
+    .collapse-head {
+      text-align: center;
+      font-size: 15px;
+      color: #ff8a8a;
+      margin-bottom: 16px;
+      line-height: 1.5;
+    }
+
+    .fin-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 14px;
+      padding: 7px 0;
+      border-bottom: 1px dashed rgba(255, 255, 255, 0.15);
+    }
+
+    .fin-row .label {
+      color: #c8ccd2;
+    }
+
+    .fin-row .val {
+      font-weight: 600;
+    }
+
+    .fin-gap {
+      margin-top: 12px;
+      text-align: center;
+      font-size: 15px;
+      color: #ffcf66;
+      line-height: 1.6;
+    }
+
+    .restart-btn {
+      width: 100%;
+      height: 44px;
+      margin-top: 18px;
+      border: none;
+      border-radius: 10px;
+      background: #ff5b5b;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="phone">
+    <!-- 顶部导航栏 -->
+    <header class="nav-bar">
+      <button class="nav-btn nav-back" id="btn-back" aria-label="返回">‹</button>
+      <div class="nav-title" id="nav-title">新的朋友</div>
+      <div style="display:flex;align-items:center;">
+        <button class="nav-btn nav-setting" id="btn-setting" aria-label="设置" title="设置">⚙</button>
+        <button class="nav-btn" id="btn-menu" aria-label="菜单">⋯</button>
+      </div>
+    </header>
+
+    <!-- 可疑指数进度条（叠加在聊天区右上角） -->
+    <div class="risk-meter">
+      <div class="risk-label">
+        <span>可疑指数</span>
+        <span class="risk-value" id="risk-value">0%</span>
+      </div>
+      <div class="risk-track">
+        <div class="risk-fill" id="risk-fill"></div>
+      </div>
+    </div>
+
+    <!-- 聊天消息区域 -->
+    <main class="chat-area" id="chat-area"></main>
+
+    <!-- 转账按钮位置（初始隐藏） -->
+    <div class="transfer-zone" id="transfer-zone">
+      <button class="transfer-btn" id="transfer-btn">
+        <span class="ic">¥</span> 给对方转账
+      </button>
+    </div>
+
+    <!-- 发送失败提示条（初始隐藏） -->
+    <div class="retry-bar" id="retry-bar">
+      <span>⚠️ 消息发送失败，请重试</span>
+      <button class="retry-btn" id="retry-btn">重新发送</button>
+    </div>
+
+    <!-- 底部输入区域 -->
+    <footer class="input-bar" id="input-bar">
+      <button class="add-btn" id="btn-add" aria-label="更多">+</button>
+      <input
+        type="text"
+        class="text-input"
+        id="text-input"
+        placeholder="发消息..."
+        autocomplete="off"
+      />
+      <button class="send-btn" id="btn-send">发送</button>
+    </footer>
+  </div>
+
+  <!-- ===== 设置弹窗（收入/支出参数） ===== -->
+  <div class="overlay" id="settings-overlay">
+    <div class="panel">
+      <h3>财务参数设置</h3>
+      <div class="field">
+        <label>年收入（元）</label>
+        <input type="number" id="set-income" value="150000" />
+      </div>
+      <div class="field">
+        <label>月房租（元）</label>
+        <input type="number" id="set-rent" value="3500" />
+      </div>
+      <div class="field">
+        <label>月伙食费（元）</label>
+        <input type="number" id="set-food" value="2000" />
+      </div>
+      <div class="field">
+        <label>信用卡月还款（元）</label>
+        <input type="number" id="set-credit" value="1500" />
+      </div>
+      <button class="panel-btn" id="settings-confirm">确认</button>
+      <p class="panel-tip">数据仅用于财务崩塌面板演示（假数据）</p>
+    </div>
+  </div>
+
+  <!-- ===== 财务崩塌面板 ===== -->
+  <div class="overlay" id="collapse-overlay">
+    <div class="collapse-panel">
+      <h2>财务崩塌面板</h2>
+      <div class="collapse-head">💔 你被骗了 <span id="loss-amount">5000</span> 元</div>
+      <div class="fin-row">
+        <span class="label">你的账户余额</span>
+        <span class="val" id="fin-balance">¥0</span>
+      </div>
+      <div class="fin-row">
+        <span class="label">下月房租</span>
+        <span class="val" id="fin-rent">¥0</span>
+      </div>
+      <div class="fin-row">
+        <span class="label">本月伙食费</span>
+        <span class="val" id="fin-food">¥0</span>
+      </div>
+      <div class="fin-row">
+        <span class="label">信用卡最低还款</span>
+        <span class="val" id="fin-credit">¥0</span>
+      </div>
+      <div class="fin-gap">
+        你现在的处境：<br />
+        ⚠️ 缺口：<span id="fin-gap">¥0</span>
+      </div>
+      <button class="restart-btn" id="restart-btn">重新开始</button>
+    </div>
+  </div>
+
+  <script>
+    /* ============================================================
+     * 反诈人生 · 聊天界面逻辑（占位假数据版本）
+     * 后续将把假数据替换为 AI 接口返回内容
+     * ============================================================ */
+
+    // ---- DOM 引用 ----
+    const chatArea = document.getElementById("chat-area");
+    const textInput = document.getElementById("text-input");
+    const btnSend = document.getElementById("btn-send");
+    const btnAdd = document.getElementById("btn-add");
+    const btnBack = document.getElementById("btn-back");
+    const btnMenu = document.getElementById("btn-menu");
+    const btnSetting = document.getElementById("btn-setting");
+    const riskFill = document.getElementById("risk-fill");
+    const riskValue = document.getElementById("risk-value");
+    const transferZone = document.getElementById("transfer-zone");
+    const transferBtn = document.getElementById("transfer-btn");
+    const inputBar = document.getElementById("input-bar");
+    const phone = document.querySelector(".phone");
+    const retryBar = document.getElementById("retry-bar");
+    const retryBtn = document.getElementById("retry-btn");
+
+    // 设置弹窗相关
+    const settingsOverlay = document.getElementById("settings-overlay");
+    const settingsConfirm = document.getElementById("settings-confirm");
+    const setIncome = document.getElementById("set-income");
+    const setRent = document.getElementById("set-rent");
+    const setFood = document.getElementById("set-food");
+    const setCredit = document.getElementById("set-credit");
+
+    // 财务崩塌面板相关
+    const collapseOverlay = document.getElementById("collapse-overlay");
+    const lossAmountEl = document.getElementById("loss-amount");
+    const finBalance = document.getElementById("fin-balance");
+    const finRent = document.getElementById("fin-rent");
+    const finFood = document.getElementById("fin-food");
+    const finCredit = document.getElementById("fin-credit");
+    const finGap = document.getElementById("fin-gap");
+    const restartBtn = document.getElementById("restart-btn");
+
+    // ---- 状态 ----
+    let riskScore = 0;          // 可疑指数 0 ~ 100
+    let myMsgCount = 0;         // 玩家已发送消息条数
+    let scammed = false;        // 是否已转账被骗
+    let isWaiting = false;      // 是否正在等待 AI 回复（防止重复发送）
+    const TRANSFER_AMOUNT = 5000; // 被骗金额（假数据）
+    const API_BASE = "http://localhost:3000"; // 后端地址（可按部署调整）
+
+    // 财务参数（默认假数据，可在设置中修改）
+    const finance = {
+      income: 150000, // 年收入
+      rent: 3500,     // 月房租
+      food: 2000,     // 月伙食费
+      credit: 1500,   // 信用卡月还款
+    };
+
+    // ---- 对话历史（传给后端供 AI 理解上下文）----
+    // 每条格式：{ role: "user" | "assistant", content: "..." }
+    let history = [];
+
+    // ---- 触发"转账按钮"的关键词 ----
+    const TRIGGER_KEYWORDS = ["投资", "内部", "操作", "机会", "账户", "理财"];
+
+    // ---- 假数据：随机兴趣爱好 ----
+    const HOBBIES = [
+      "旅行", "摄影", "健身", "做饭", "喝咖啡",
+      "看电影", "爬山", "养宠物", "读书", "听音乐",
+    ];
+
+    function randomHobby() {
+      return HOBBIES[Math.floor(Math.random() * HOBBIES.length)];
+    }
+
+    // ---- 开场：骗子发来的 3 条消息（假数据占位，并写入历史）----
+    const OPENING_MESSAGES = [
+      "你好呀，在忙什么呢？",
+      "看你的头像感觉你是个特别有气质的人",
+      `我平时也喜欢${randomHobby()}`,
+    ];
+
+    /**
+     * 追加一条消息气泡
+     * @param {string} text 消息内容
+     * @param {"me"|"them"} who 发送方
+     * @param {boolean} isTyping 是否为"输入中"占位
+     */
+    function appendMessage(text, who, isTyping = false) {
+      const row = document.createElement("div");
+      row.className = "msg-row " + who + (isTyping ? " typing" : "");
+
+      const avatar = document.createElement("div");
+      avatar.className = "avatar";
+      avatar.textContent = who === "me" ? "我" : "他";
+
+      const bubble = document.createElement("div");
+      bubble.className = "bubble";
+      if (isTyping) {
+        // "对方正在输入…" 三点跳动动画
+        bubble.appendChild(document.createTextNode("对方正在输入"));
+        const dots = document.createElement("span");
+        dots.className = "typing-dots";
+        dots.innerHTML = "<span></span><span></span><span></span>";
+        bubble.appendChild(dots);
+      } else {
+        bubble.textContent = text;
+      }
+
+      row.appendChild(avatar);
+      row.appendChild(bubble);
+      chatArea.appendChild(row);
+      scrollToBottom();
+      return row;
+    }
+
+    function scrollToBottom() {
+      chatArea.scrollTop = chatArea.scrollHeight;
+    }
+
+    /** 追加一条系统消息（灰色居中） */
+    function appendSystemMessage(text) {
+      const row = document.createElement("div");
+      row.className = "sys-msg";
+      const span = document.createElement("span");
+      span.textContent = text;
+      row.appendChild(span);
+      chatArea.appendChild(row);
+      scrollToBottom();
+    }
+
+    /**
+     * 更新可疑指数（0-100），进度条随分值由绿变红
+     * @param {number} delta 增量
+     */
+    function bumpRisk(delta) {
+      riskScore = Math.min(100, Math.max(0, riskScore + delta));
+      riskFill.style.width = riskScore + "%";
+      riskValue.textContent = Math.round(riskScore) + "%";
+
+      // 颜色：绿 -> 黄 -> 红
+      let color = "#23c265";
+      if (riskScore >= 70) color = "#e74c3c";
+      else if (riskScore >= 40) color = "#f5a623";
+      riskFill.style.background = color;
+      riskValue.style.color = color;
+    }
+
+    /** 骗子（对方）依次发送开场消息 */
+    function playOpeningMessages() {
+      OPENING_MESSAGES.forEach((msg, i) => {
+        setTimeout(() => {
+          appendMessage(msg, "them");
+          bumpRisk(8); // 每条开场消息略微提升可疑指数
+          // 写入对话历史（assistant 角色），供 AI 理解上下文
+          history.push({ role: "assistant", content: msg });
+        }, 600 * (i + 1));
+      });
+    }
+
+    /** 发送我方消息 */
+    function sendMyMessage() {
+      if (scammed || isWaiting) return; // 被骗后 / 等待回复时禁止重复发送
+      const text = textInput.value.trim();
+      if (!text) return;
+      appendMessage(text, "me");
+      textInput.value = "";
+
+      // 记录玩家消息到对话历史
+      history.push({ role: "user", content: text });
+
+      // 玩家消息计数 +1
+      myMsgCount++;
+
+      // 第 5 轮：兜底自动显示红色大"转账按钮"（优先级低于关键词触发）
+      if (myMsgCount === 5) {
+        showTransferButton();
+      }
+
+      // 调用后端获取 AI 回复
+      callChatAPI(text);
+    }
+
+    /** 调用 POST /api/chat 获取骗子 AI 回复 */
+    async function callChatAPI(message) {
+      isWaiting = true;
+      hideRetry();
+      const typingRow = appendMessage("", "them", true);
+
+      try {
+        const resp = await fetch(`${API_BASE}/api/chat`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message, history }),
+        });
+
+        if (!resp.ok) throw new Error("HTTP " + resp.status);
+        const data = await resp.json();
+
+        typingRow.remove();
+        const reply = data.reply || "（对方没有回应）";
+        appendMessage(reply, "them");
+
+        // 记录 AI 回复到对话历史
+        history.push({ role: "assistant", content: reply });
+
+        // 每轮推进可疑指数
+        bumpRisk(15);
+
+        // 关键词检测：触发"转账按钮"
+        maybeShowTransferByKeyword(reply);
+      } catch (err) {
+        // API 调用失败：移除输入动画，提示重发
+        typingRow.remove();
+        showRetry(message);
+        console.error("调用 /api/chat 失败:", err);
+      } finally {
+        isWaiting = false;
+      }
+    }
+
+    /** 第 5 轮后 / 关键词触发：显示红色大按钮（帮他操作 / 转钱） */
+    function showTransferButton() {
+      if (transferZone.classList.contains("show")) return;
+      transferBtn.innerHTML = '<span class="ic">⚠</span> 帮他操作（转钱）';
+      transferBtn.classList.add("big-red");
+      transferZone.classList.add("show");
+    }
+
+    /** 检测 AI 回复中的诱导关键词，命中则显示转账按钮 */
+    function maybeShowTransferByKeyword(reply) {
+      const hit = TRIGGER_KEYWORDS.some((kw) => reply.includes(kw));
+      if (hit) {
+        showTransferButton();
+        bumpRisk(25); // 命中关键词，可疑指数大幅上升
+      }
+    }
+
+    /** 显示发送失败提示，并记录待重发的消息 */
+    function showRetry(message) {
+      retryBar.dataset.pending = message;
+      retryBar.classList.add("show");
+    }
+
+    function hideRetry() {
+      retryBar.classList.remove("show");
+      delete retryBar.dataset.pending;
+    }
+
+    // ---- 事件绑定 ----
+    btnSend.addEventListener("click", sendMyMessage);
+    textInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") sendMyMessage();
+    });
+
+    btnAdd.addEventListener("click", () => {
+      alert("（占位）更多功能：相册 / 拍摄 / 位置 …");
+    });
+
+    btnBack.addEventListener("click", () => {
+      alert("（占位）返回上一页");
+    });
+
+    btnMenu.addEventListener("click", () => {
+      alert("（占位）聊天菜单：举报 / 拉黑 …");
+    });
+
+    // ---- 设置入口：打开设置弹窗 ----
+    btnSetting.addEventListener("click", () => {
+      setIncome.value = finance.income;
+      setRent.value = finance.rent;
+      setFood.value = finance.food;
+      setCredit.value = finance.credit;
+      settingsOverlay.classList.add("show");
+    });
+
+    // 点击遮罩空白处关闭设置
+    settingsOverlay.addEventListener("click", (e) => {
+      if (e.target === settingsOverlay) settingsOverlay.classList.remove("show");
+    });
+
+    // 确认设置
+    settingsConfirm.addEventListener("click", () => {
+      finance.income = Number(setIncome.value) || 0;
+      finance.rent = Number(setRent.value) || 0;
+      finance.food = Number(setFood.value) || 0;
+      finance.credit = Number(setCredit.value) || 0;
+      settingsOverlay.classList.remove("show");
+      appendSystemMessage("财务参数已更新（仅供演示）");
+    });
+
+    // ---- 重新开始 ----
+    restartBtn.addEventListener("click", () => {
+      location.reload();
+    });
+
+    transferBtn.addEventListener("click", () => {
+      if (scammed) return;
+      doTransfer();
+    });
+
+    // ---- 重发：点击"重新发送"用上次消息再次调用 API ----
+    retryBtn.addEventListener("click", () => {
+      const pending = retryBar.dataset.pending;
+      if (pending) {
+        hideRetry();
+        callChatAPI(pending);
+      }
+    });
+
+    /** 执行转账（被骗）流程 */
+    function doTransfer() {
+      scammed = true;
+
+      // a. 系统消息：你已转账 5000 元
+      appendSystemMessage(`你已转账 ${TRANSFER_AMOUNT} 元`);
+
+      // b. 骗子头像变灰，最后一条消息显示系统提示
+      const themRows = chatArea.querySelectorAll(".msg-row.them");
+      themRows.forEach((r) => r.classList.add("greyed"));
+      appendMessage("系统提示：对方已不是你的好友", "them");
+
+      // c. 屏幕色调由暖转冷
+      phone.classList.add("cold");
+
+      // d. 底部输入框和转账按钮全部消失
+      inputBar.style.display = "none";
+      transferZone.style.display = "none";
+      retryBar.classList.remove("show");
+
+      // e. 调用后端生成个性化财务崩塌数据，3 秒后展示面板
+      setTimeout(() => fetchFinanceAndShow(), 3000);
+    }
+
+    /** 调用 POST /api/finance 获取个性化财务崩塌数据并展示 */
+    async function fetchFinanceAndShow() {
+      const payload = {
+        income: finance.income,
+        rent: finance.rent,
+        food: finance.food,
+        creditCard: finance.credit,
+        lost: TRANSFER_AMOUNT,
+      };
+
+      try {
+        const resp = await fetch(`${API_BASE}/api/finance`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!resp.ok) throw new Error("HTTP " + resp.status);
+        const data = await resp.json();
+
+        lossAmountEl.textContent = TRANSFER_AMOUNT;
+        finBalance.textContent = "¥" + (data.balance ?? 0);
+        finRent.textContent = "¥" + (data.rent ?? finance.rent);
+        finFood.textContent = "¥" + (data.food ?? finance.food);
+        finCredit.textContent = "¥" + (data.creditCard ?? finance.credit);
+        finGap.textContent = "¥" + (data.gap ?? TRANSFER_AMOUNT);
+        if (data.tips) {
+          appendSystemMessage("防骗提示：" + data.tips);
+        }
+      } catch (err) {
+        console.error("调用 /api/finance 失败:", err);
+        // 兜底：本地计算（与后端公式一致）
+        const monthlyIncome = Math.round(finance.income / 12);
+        const balance =
+          monthlyIncome - finance.rent - finance.food - finance.credit - TRANSFER_AMOUNT;
+        lossAmountEl.textContent = TRANSFER_AMOUNT;
+        finBalance.textContent = "¥" + balance;
+        finRent.textContent = "¥" + finance.rent;
+        finFood.textContent = "¥" + finance.food;
+        finCredit.textContent = "¥" + finance.credit;
+        finGap.textContent = "¥" + TRANSFER_AMOUNT;
+      }
+
+      collapseOverlay.classList.add("show");
+    }
+
+    // ---- 初始化：加载后自动播放开场消息 ----
+    window.addEventListener("load", playOpeningMessages);
+  </script>
+</body>
+</html>
