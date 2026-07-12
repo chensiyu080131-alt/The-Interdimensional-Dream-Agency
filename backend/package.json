@@ -1,7 +1,7 @@
 {
   "name": "fanzha-rensheng-backend",
   "version": "1.0.0",
-  "description": "反诈人生 后端API服务",
+  "description": "反诈人生 后端API服务（默认 Ollama 本地免费模型，可选腾讯混元）",
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
@@ -10,7 +10,9 @@
   "dependencies": {
     "express": "^4.19.2",
     "body-parser": "^1.20.2",
-    "cors": "^2.8.5",
+    "cors": "^2.8.5"
+  },
+  "optionalDependencies": {
     "tencentcloud-sdk-nodejs-hunyuan": "^4.0.0"
   }
 }
