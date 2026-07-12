@@ -540,6 +540,236 @@
       font-weight: 700;
       cursor: pointer;
     }
+
+    /* ===== 反诈知识科普面板 ===== */
+    .educate-panel {
+      background: #fff;
+      border-radius: 16px;
+      padding: 22px 20px 20px;
+      width: 100%;
+      max-width: 340px;
+      max-height: 86vh;
+      overflow-y: auto;
+      color: #191919;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    }
+
+    .educate-badge {
+      display: inline-block;
+      background: #eafaf0;
+      color: #23c265;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 20px;
+      margin-bottom: 10px;
+    }
+
+    .educate-panel h2 {
+      font-size: 17px;
+      line-height: 1.4;
+      margin-bottom: 6px;
+    }
+
+    .educate-level {
+      display: inline-block;
+      font-size: 12px;
+      color: #f57c00;
+      background: #fff3e0;
+      padding: 3px 10px;
+      border-radius: 6px;
+      margin-bottom: 12px;
+    }
+
+    .educate-section {
+      margin-bottom: 14px;
+      padding-top: 12px;
+      border-top: 1px solid #f0f0f0;
+    }
+
+    .educate-section:first-of-type {
+      border-top: none;
+      padding-top: 0;
+    }
+
+    .educate-h {
+      font-size: 13px;
+      font-weight: 700;
+      color: #555;
+      margin-bottom: 6px;
+    }
+
+    .educate-section p {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #333;
+    }
+
+    .educate-section.verdict p {
+      color: #c0392b;
+      font-weight: 600;
+    }
+
+    .educate-section .rhyme {
+      color: #2b6cb0;
+      font-weight: 600;
+    }
+
+    .rules-col {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .rules-col .rule-item {
+      font-size: 13.5px;
+      line-height: 1.5;
+      color: #333;
+      padding-left: 16px;
+      position: relative;
+    }
+
+    .rules-col .rule-item::before {
+      content: "•";
+      position: absolute;
+      left: 2px;
+      color: #23c265;
+    }
+
+    .educate-btn {
+      width: 100%;
+      height: 44px;
+      margin-top: 8px;
+      border: none;
+      border-radius: 10px;
+      background: #23c265;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .educate-source {
+      font-size: 11px;
+      color: #aaa;
+      text-align: center;
+      margin-top: 10px;
+    }
+
+    /* ===== 防骗指南 / 短图文面板 ===== */
+    .guide-panel {
+      background: #fff;
+      border-radius: 16px;
+      padding: 22px 20px 20px;
+      width: 100%;
+      max-width: 340px;
+      max-height: 86vh;
+      overflow-y: auto;
+      color: #191919;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    }
+
+    .guide-panel h2 {
+      font-size: 17px;
+      line-height: 1.4;
+      margin: 8px 0 12px;
+      text-align: center;
+    }
+
+    .guide-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .guide-tab {
+      flex: 1;
+      height: 36px;
+      border: 1px solid #e0e0e0;
+      background: #f7f7f7;
+      border-radius: 8px;
+      font-size: 13px;
+      color: #555;
+      cursor: pointer;
+    }
+
+    .guide-tab.active {
+      background: #23c265;
+      color: #fff;
+      border-color: #23c265;
+      font-weight: 600;
+    }
+
+    .guide-body {
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .guide-item {
+      border: 1px solid #eef0ef;
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 12px;
+      background: #fafdfb;
+    }
+
+    .guide-item .gi-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: #1a8a4f;
+      margin-bottom: 4px;
+    }
+
+    .guide-item .gi-tag {
+      display: inline-block;
+      font-size: 11px;
+      color: #888;
+      background: #f0f0f0;
+      padding: 2px 8px;
+      border-radius: 10px;
+      margin-bottom: 8px;
+    }
+
+    .guide-item .gi-feature {
+      color: #444;
+      margin-bottom: 8px;
+    }
+
+    .guide-item .gi-guide {
+      color: #2b6cb0;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .guide-item .gi-verdict {
+      color: #c0392b;
+      font-weight: 600;
+    }
+
+    .guide-item .gi-share {
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px dashed #e3e3e3;
+      font-size: 12.5px;
+      color: #666;
+      white-space: pre-line;
+    }
+
+    .guide-share-text {
+      white-space: pre-line;
+      font-size: 13.5px;
+      line-height: 1.7;
+      color: #333;
+      background: #f7f7f7;
+      border-radius: 10px;
+      padding: 12px 14px;
+    }
+
+    .guide-close-btn {
+      background: #f2f2f2;
+      color: #555;
+      margin-top: 8px;
+    }
   </style>
 </head>
 <body>
@@ -649,6 +879,78 @@
     </div>
   </div>
 
+  <!-- ===== 反诈知识科普面板（被骗后展示，按意识分档） ===== -->
+  <div class="overlay" id="educate-overlay">
+    <div class="educate-panel">
+      <div class="educate-badge">🛡 反诈知识卡</div>
+      <h2 id="educate-name">你刚刚遭遇的是：刷单返利类</h2>
+      <div class="educate-level" id="educate-level">标准科普</div>
+
+      <div class="educate-section">
+        <div class="educate-h">骗术特征</div>
+        <p id="educate-feature"></p>
+      </div>
+
+      <div class="educate-section guide" id="educate-guide-wrap" style="display:none;">
+        <div class="educate-h">针对性防骗指南</div>
+        <p id="educate-guide"></p>
+      </div>
+
+      <div class="educate-section verdict">
+        <div class="educate-h">一句话拆穿</div>
+        <p id="educate-verdict"></p>
+      </div>
+
+      <div class="educate-section" id="educate-sixrules-wrap" style="display:none;">
+        <div class="educate-h">防骗六大守则</div>
+        <div class="rules-col" id="educate-sixrules"></div>
+      </div>
+
+      <div class="educate-section" id="educate-rules-wrap" style="display:none;">
+        <div class="educate-h">防诈准则</div>
+        <div class="rules-col" id="educate-rules"></div>
+      </div>
+
+      <div class="educate-section" id="educate-basics-wrap" style="display:none;">
+        <div class="educate-h">基础认知</div>
+        <p id="educate-basics"></p>
+      </div>
+
+      <div class="educate-section">
+        <div class="educate-h">防诈口诀</div>
+        <p class="rhyme" id="educate-rhyme"></p>
+      </div>
+
+      <div class="educate-section">
+        <div class="educate-h">反诈工具</div>
+        <p id="educate-tools"></p>
+      </div>
+
+      <button class="educate-btn" id="educate-close">我记住了，继续看财务崩塌 →</button>
+      <p class="educate-source">内容来源：国家反诈中心</p>
+    </div>
+  </div>
+
+  <!-- ===== 防骗指南 / 可转发短图文面板 ===== -->
+  <div class="overlay" id="guide-overlay">
+    <div class="guide-panel">
+      <div class="educate-badge">📋 防骗指南 · 近期高发</div>
+      <h2>近期高发骗局防骗指南</h2>
+
+      <div class="guide-tabs">
+        <button class="guide-tab active" data-tab="online">线上电信</button>
+        <button class="guide-tab" data-tab="offline">线下接触</button>
+        <button class="guide-tab" data-tab="six">六大守则</button>
+      </div>
+
+      <div class="guide-body" id="guide-body"></div>
+
+      <button class="educate-btn" id="guide-copy">复制可转发文案</button>
+      <button class="educate-btn guide-close-btn" id="guide-close">关闭</button>
+      <p class="educate-source">内容来源：国家反诈中心</p>
+    </div>
+  </div>
+
   <script>
     /* ============================================================
      * 反诈人生 · 聊天界面逻辑（占位假数据版本）
@@ -690,6 +992,31 @@
     const finGap = document.getElementById("fin-gap");
     const restartBtn = document.getElementById("restart-btn");
 
+    // 反诈知识科普面板相关
+    const educateOverlay = document.getElementById("educate-overlay");
+    const educateName = document.getElementById("educate-name");
+    const educateLevel = document.getElementById("educate-level");
+    const educateFeature = document.getElementById("educate-feature");
+    const educateVerdict = document.getElementById("educate-verdict");
+    const educateRulesWrap = document.getElementById("educate-rules-wrap");
+    const educateRules = document.getElementById("educate-rules");
+    const educateBasicsWrap = document.getElementById("educate-basics-wrap");
+    const educateBasics = document.getElementById("educate-basics");
+    const educateRhyme = document.getElementById("educate-rhyme");
+    const educateTools = document.getElementById("educate-tools");
+    const educateClose = document.getElementById("educate-close");
+    const educateGuideWrap = document.getElementById("educate-guide-wrap");
+    const educateGuide = document.getElementById("educate-guide");
+    const educateSixRulesWrap = document.getElementById("educate-sixrules-wrap");
+    const educateSixRules = document.getElementById("educate-sixrules");
+
+    // 防骗指南 / 短图文面板相关
+    const guideOverlay = document.getElementById("guide-overlay");
+    const guideBody = document.getElementById("guide-body");
+    const guideCopy = document.getElementById("guide-copy");
+    const guideClose = document.getElementById("guide-close");
+    const guideTabs = document.querySelectorAll(".guide-tab");
+
     // ---- 状态 ----
     let riskScore = 0;          // 可疑指数 0 ~ 100
     let myMsgCount = 0;         // 玩家已发送消息条数
@@ -697,6 +1024,9 @@
     let isWaiting = false;      // 是否正在等待 AI 回复（防止重复发送）
     const TRANSFER_AMOUNT = 5000; // 被骗金额（假数据）
     const API_BASE = "http://localhost:3000"; // 后端地址（可按部署调整）
+
+    // 反诈口诀兜底（educate 接口不可用时的本地最小科普）
+    const ANTI_FRAUD_RHYME_FALLBACK = "陌生电话短信多警惕；中奖退税、暴利理财不搭理；不理不信不汇款，谨慎防骗保平安。";
 
     // 财务参数（默认假数据，可在设置中修改）
     const finance = {
@@ -912,7 +1242,7 @@
     });
 
     btnMenu.addEventListener("click", () => {
-      alert("（占位）聊天菜单：举报 / 拉黑 …");
+      openGuidePanel();
     });
 
     // ---- 设置入口：打开设置弹窗 ----
@@ -978,18 +1308,262 @@
       transferZone.style.display = "none";
       retryBar.classList.remove("show");
 
-      // e. 调用后端生成个性化财务崩塌数据，3 秒后展示面板
-      setTimeout(() => fetchFinanceAndShow(), 3000);
+      // e. 先展示针对性"反诈知识卡"，再展示财务崩塌
+      setTimeout(() => fetchEducateAndShow(), 1500);
     }
+
+    /**
+     * 调用 POST /api/educate 获取针对性反诈知识并展示。
+     * awareness 档位由"可疑指数"代理：指数越低说明越易上当 -> 入门提醒；
+     * 指数越高说明反诈意识越强 -> 进阶科普（便于传播给他人）。
+     */
+    async function fetchEducateAndShow() {
+      const chatText = history.map((m) => m.content).join(" ");
+      let awareness = "mid";
+      if (riskScore < 50) awareness = "low";
+      else if (riskScore >= 85) awareness = "high";
+
+      let data = null;
+      try {
+        const resp = await fetch(`${API_BASE}/api/educate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: chatText, awareness }),
+        });
+        if (resp.ok) data = await resp.json();
+      } catch (err) {
+        console.error("调用 /api/educate 失败:", err);
+      }
+
+      if (!data) {
+        // 兜底：本地最小知识卡
+        data = {
+          matchedName: "刷单返利类",
+          knowledge: {
+            level: "标准科普",
+            feature: "以兼职返佣金为诱饵，前期小额返利，诱导大额投入后无法提现。",
+            verdict: "所有要求垫付资金的刷单都是诈骗！",
+            rhyme: ANTI_FRAUD_RHYME_FALLBACK,
+            tools: "下载国家反诈中心 APP，开启诈骗预警。",
+          },
+        };
+      }
+
+      renderEducate(data);
+    }
+
+    /** 将反诈知识渲染到科普面板 */
+    function renderEducate(data) {
+      const k = data.knowledge || {};
+      educateName.textContent = "你刚刚遭遇的是：" + (data.matchedName || "刷单返利类");
+      educateLevel.textContent = k.level || "标准科普";
+      educateFeature.textContent = k.feature || "";
+      educateVerdict.textContent = k.verdict || "";
+      educateRhyme.textContent = k.rhyme || "";
+      educateTools.textContent = k.tools || "";
+
+      // 针对性防骗指南（近期高发骗局才带 guide）
+      if (k.guide) {
+        educateGuideWrap.style.display = "block";
+        educateGuide.textContent = k.guide;
+      } else {
+        educateGuideWrap.style.display = "none";
+      }
+
+      // 进阶档位：展示防骗六大守则
+      if (k.sixRules) {
+        educateSixRulesWrap.style.display = "block";
+        educateSixRules.innerHTML = "";
+        k.sixRules.forEach((t) => {
+          const div = document.createElement("div");
+          div.className = "rule-item";
+          div.textContent = t;
+          educateSixRules.appendChild(div);
+        });
+      } else {
+        educateSixRulesWrap.style.display = "none";
+      }
+
+      // 进阶档位：展示四要/四不要 + 基础认知
+      if (k.fourWant || k.fourDont) {
+        educateRulesWrap.style.display = "block";
+        educateRules.innerHTML = "";
+        const list = [];
+        (k.fourWant || []).forEach((t) => list.push("要：" + t));
+        (k.fourDont || []).forEach((t) => list.push("不要：" + t));
+        if (k.fourNo) list.push(k.fourNo);
+        list.forEach((t) => {
+          const div = document.createElement("div");
+          div.className = "rule-item";
+          div.textContent = t;
+          educateRules.appendChild(div);
+        });
+      } else {
+        educateRulesWrap.style.display = "none";
+      }
+
+      if (k.basics) {
+        educateBasicsWrap.style.display = "block";
+        educateBasics.textContent = k.basics;
+      } else {
+        educateBasicsWrap.style.display = "none";
+      }
+
+      educateOverlay.classList.add("show");
+    }
+
+    // 点击"继续"关闭科普面板，展示财务崩塌
+    educateClose.addEventListener("click", () => {
+      educateOverlay.classList.remove("show");
+      fetchFinanceAndShow();
+    });
+
+    /* ============================================================
+     * 防骗指南 / 短图文面板逻辑
+     * ============================================================ */
+    let guideDataCache = null; // 缓存 /api/guide 返回
+    let currentTab = "online";
+
+    /** 打开防骗指南面板（首次打开时拉取数据） */
+    async function openGuidePanel() {
+      guideOverlay.classList.add("show");
+      renderGuideBody();
+      if (guideDataCache) return;
+      try {
+        const resp = await fetch(`${API_BASE}/api/guide`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        });
+        if (resp.ok) guideDataCache = await resp.json();
+      } catch (err) {
+        console.error("调用 /api/guide 失败:", err);
+      }
+      renderGuideBody();
+    }
+
+    /** 根据当前 tab 渲染内容 */
+    function renderGuideBody() {
+      if (!guideDataCache) {
+        guideBody.innerHTML = '<div style="color:#999;text-align:center;padding:20px;">加载中…</div>';
+        return;
+      }
+      if (currentTab === "six") {
+        // 防骗六大守则 + 可转发文案
+        const lines = guideDataCache.share || [];
+        guideBody.innerHTML = '<div class="guide-share-text">' + escapeHtml(lines.join("\n")) + "</div>";
+        return;
+      }
+      const list = currentTab === "online" ? guideDataCache.online : guideDataCache.offline;
+      if (!list || list.length === 0) {
+        guideBody.innerHTML = '<div style="color:#999;text-align:center;padding:20px;">暂无数据</div>';
+        return;
+      }
+      guideBody.innerHTML = list
+        .map(
+          (f) => `
+        <div class="guide-item">
+          <div class="gi-name">${escapeHtml(f.name)}</div>
+          <span class="gi-tag">${escapeHtml(f.sceneLabel || "")}</span>
+          <div class="gi-feature">${escapeHtml(f.feature || "")}</div>
+          <div class="gi-guide">🔰 防骗指南：${escapeHtml(f.guide || "")}</div>
+          <div class="gi-verdict">❌ ${escapeHtml(f.verdict || "")}</div>
+          <div class="gi-share">${escapeHtml((f.share || []).join("\n"))}</div>
+        </div>`
+        )
+        .join("");
+    }
+
+    /** HTML 转义，防止注入 */
+    function escapeHtml(s) {
+      return String(s == null ? "" : s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+    }
+
+    // tab 切换
+    guideTabs.forEach((tab) => {
+      tab.addEventListener("click", () => {
+        guideTabs.forEach((t) => t.classList.remove("active"));
+        tab.classList.add("active");
+        currentTab = tab.dataset.tab;
+        renderGuideBody();
+      });
+    });
+
+    // 复制可转发文案
+    guideCopy.addEventListener("click", () => {
+      if (!guideDataCache) return;
+      const text =
+        currentTab === "six"
+          ? (guideDataCache.share || []).join("\n")
+          : ((currentTab === "online" ? guideDataCache.online : guideDataCache.offline) || [])
+              .map((f) => (f.share || []).join("\n"))
+              .join("\n\n");
+      copyText(text);
+    });
+
+    /** 复制到剪贴板（兼容未授权情况） */
+    function copyText(text) {
+      const done = () => {
+        const old = guideCopy.textContent;
+        guideCopy.textContent = "已复制 ✓";
+        setTimeout(() => (guideCopy.textContent = old), 1500);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
+      } else {
+        fallbackCopy(text, done);
+      }
+    }
+
+    function fallbackCopy(text, done) {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand("copy");
+        done();
+      } catch (e) {
+        alert("复制失败，请手动选择文案。");
+      }
+      document.body.removeChild(ta);
+    }
+
+    // 关闭指南面板
+    guideClose.addEventListener("click", () => guideOverlay.classList.remove("show"));
+    guideOverlay.addEventListener("click", (e) => {
+      if (e.target === guideOverlay) guideOverlay.classList.remove("show");
+    });
 
     /** 调用 POST /api/finance 获取个性化财务崩塌数据并展示 */
     async function fetchFinanceAndShow() {
+      // 用对话文本推断本次骗术类型，传给后端以细化提示
+      const chatText = history.map((m) => m.content).join(" ");
+      let fraudType = "";
+      try {
+        const r = await fetch(`${API_BASE}/api/educate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: chatText }),
+        });
+        if (r.ok) {
+          const d = await r.json();
+          fraudType = d.matchedType || "";
+        }
+      } catch (e) { /* 忽略，后端有兜底 */ }
+
       const payload = {
         income: finance.income,
         rent: finance.rent,
         food: finance.food,
         creditCard: finance.credit,
         lost: TRANSFER_AMOUNT,
+        fraudType,
       };
 
       try {
