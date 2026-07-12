@@ -10,13 +10,23 @@
 | [DEPLOY.md](./DEPLOY.md) | 部署指南（腾讯云 CloudBase 云函数 + 静态托管） |
 | [RISK-MANAGEMENT.md](./RISK-MANAGEMENT.md) | **产品风险管控文档**：15 个风险点（法律合规 / 内容伦理 / 技术运营）+ 管控总览表 + 执行清单 + 合规依据索引 |
 
+## 产品设计文档（异次元梦想局）
+
+| 文档 | 说明 |
+|------|------|
+| [选题.md](./product/选题.md) | 五幕式游戏框架与核心体验设计 |
+| [GDD](./product/GDD%20【Game%20Design%20Document（游戏设计文档）】.md) | 游戏设计文档（MVP 版） |
+| [48小时 Demo PRD](./product/48小时Demo%20PRD.md) | 48 小时 Demo 范围与开发排期 |
+| [完整 PRD V5.0](./product/完整产品需求文档（PRD）V5.0.md) | 完整产品需求文档 |
+| [法律.md](./product/法律.md) | 法律合规与风险管控体系 |
+
 ## 项目结构
 
 ```
 反诈人生/
 ├── frontend/   # 前端页面（HTML / CSS / JS）
 ├── backend/    # 后端 API 服务（Node.js + Express）
-├── docs/       # 项目文档（部署、风险管理等）
+├── docs/       # 项目文档（部署、风险管理、产品设计等）
 └── README.md   # 顶层说明
 ```
 
