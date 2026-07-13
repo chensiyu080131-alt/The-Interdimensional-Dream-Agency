@@ -6,7 +6,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="theme-color" content="#ededed" />
-  <title>异次元梦想局 · Demo</title>
+  <title>异次元梦想局 · 反诈人生</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     html, body { height: 100%; overflow: hidden; }
@@ -33,20 +33,20 @@
       padding: 18px; overflow-y: auto;
     }
     .overlay.show { display: flex; }
-    .panel, .case-panel, .report-panel, .social-panel, .timeline-panel, .toolbox-panel {
+    .panel, .case-panel, .report-panel, .social-panel, .timeline-panel, .toolbox-panel, .codex-panel, .share-panel {
       background: #fff; border-radius: 16px; padding: 22px 20px;
       width: 100%; max-width: 380px; max-height: 92%; overflow-y: auto;
       box-shadow: 0 12px 40px rgba(0,0,0,0.3);
     }
-    .panel h2, .case-panel h2, .report-panel h2, .social-panel h2, .timeline-panel h2, .toolbox-panel h2 {
+    .panel h2, .case-panel h2, .report-panel h2, .social-panel h2, .timeline-panel h2, .toolbox-panel h2, .codex-panel h2, .share-panel h2 {
       font-size: 19px; color: #1a1a1a; margin-bottom: 12px; text-align: center;
     }
-    .panel-btn, .case-close-btn, .restart-btn, .act-btn, .toolbox-btn, .report-btn, .social-btn {
+    .panel-btn, .case-close-btn, .restart-btn, .act-btn, .toolbox-btn, .report-btn, .social-btn, .codex-btn, .share-btn {
       width: 100%; border: none; border-radius: 10px; padding: 13px;
       font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 10px;
       background: #07c160; color: #fff; transition: opacity .15s;
     }
-    .panel-btn:active, .case-close-btn:active, .restart-btn:active, .act-btn:active, .toolbox-btn:active, .report-btn:active, .social-btn:active { opacity: 0.8; }
+    .panel-btn:active, .case-close-btn:active, .restart-btn:active, .act-btn:active, .toolbox-btn:active, .report-btn:active, .social-btn:active, .codex-btn:active, .share-btn:active { opacity: 0.8; }
     .panel-tip { font-size: 12px; color: #999; text-align: center; margin-top: 8px; }
 
     /* ===== 顶部导航 ===== */
@@ -79,112 +79,153 @@
       width: 52px; height: 52px; border-radius: 50%; flex: 0 0 auto;
       display: flex; align-items: center; justify-content: center; font-size: 22px; color: #fff; font-weight: 700;
     }
-    .role-name { font-size: 17px; font-weight: 700; color: #1a1a1a; }
-    .role-meta { font-size: 12px; color: #888; margin-top: 2px; }
-    .role-line-tag {
-      display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 10px;
-      color: #fff; margin-top: 6px; font-weight: 600;
-    }
-    .role-detail { display: none; margin-top: 12px; padding-top: 12px; border-top: 1px dashed #eee; }
-    .role-card.selected .role-detail { display: block; }
-    .role-detail p { font-size: 13px; color: #555; line-height: 1.7; margin-bottom: 6px; }
-    .role-confirm { background: #07c160; color: #fff; opacity: 0; pointer-events: none; transition: opacity .2s; }
-    .role-card.selected .role-confirm { opacity: 1; pointer-events: auto; }
+    .role-name { font-size: 16px; font-weight: 700; color: #1a1a1a; }
+    .role-meta { font-size: 12px; color: #888; margin: 2px 0; }
+    .role-line-tag { display: inline-block; color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 20px; }
+    .role-detail { margin-top: 10px; font-size: 13px; color: #555; line-height: 1.6; }
+    .role-detail p { margin-bottom: 6px; }
 
-    /* ===== 第一幕：聊天区 + 信息暴露度 ===== */
-    .expose-meter {
-      flex: 0 0 auto; background: #fff; padding: 8px 14px; border-bottom: 1px solid #eaeaea;
-      display: flex; align-items: center; gap: 10px;
+    /* ===== 双血条（戒心值 / 钱包值）方案1 ===== */
+    .hud {
+      flex: 0 0 auto; padding: 8px 12px 6px;
+      background: #fafafa; border-bottom: 1px solid #e6e6e6;
     }
-    .expose-label { font-size: 12px; color: #666; white-space: nowrap; }
-    .expose-track { flex: 1; height: 8px; background: #e6e6e6; border-radius: 4px; overflow: hidden; }
-    .expose-fill { height: 100%; width: 0%; background: linear-gradient(90deg,#07c160,#f0a020,#e64340); transition: width .4s; }
-    .expose-value { font-size: 12px; font-weight: 700; color: #e64340; min-width: 34px; text-align: right; }
+    .hud-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .hud-label { width: 56px; font-size: 12px; color: #555; flex: 0 0 auto; }
+    .hud-track { flex: 1; height: 12px; background: #e3e3e3; border-radius: 8px; overflow: hidden; position: relative; }
+    .hud-fill { height: 100%; width: 100%; transition: width .4s ease; border-radius: 8px; }
+    .hud-fill.guard { background: linear-gradient(90deg,#07c160,#3ad07f); }
+    .hud-fill.wallet { background: linear-gradient(90deg,#f0a020,#ffce54); }
+    .hud-val { width: 40px; text-align: right; font-size: 12px; font-weight: 700; flex: 0 0 auto; }
+    .hud-val.guard { color: #07c160; }
+    .hud-val.wallet { color: #c87f00; }
+    .hud-level { text-align: center; font-size: 12px; color: #576b95; margin-top: 2px; font-weight: 600; }
 
-    .chat-area { flex: 1; overflow-y: auto; padding: 14px 12px; background: #ededed; }
-    .msg { max-width: 76%; margin-bottom: 12px; display: flex; flex-direction: column; }
-    .msg.ai { align-self: flex-start; }
-    .msg.me { align-self: flex-end; align-items: flex-end; }
+    /* ===== 第一幕聊天 ===== */
+    .expose-meter { display: none; } /* 被双血条替代，保留兼容 */
+    #stage-chat { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+    .chat-area { flex: 1; overflow-y: auto; padding: 14px 12px; position: relative; }
+    .msg { display: flex; margin-bottom: 12px; align-items: flex-end; }
+    .msg.ai { justify-content: flex-start; }
+    .msg.me { justify-content: flex-end; }
     .bubble {
-      padding: 10px 13px; border-radius: 10px; font-size: 15px; line-height: 1.5; word-break: break-word;
+      max-width: 76%; padding: 10px 13px; border-radius: 14px; font-size: 15px;
+      line-height: 1.5; word-break: break-word;
     }
-    .msg.ai .bubble { background: #fff; color: #1a1a1a; border-top-left-radius: 2px; }
-    .msg.me .bubble { background: #95ec69; color: #1a1a1a; border-top-right-radius: 2px; }
-    .msg .tag { font-size: 10px; color: #999; margin-top: 4px; }
-
-    .options-bar { flex: 0 0 auto; background: #f7f7f7; border-top: 1px solid #e3e3e3; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+    .msg.ai .bubble { background: #fff; color: #1a1a1a; border-bottom-left-radius: 4px; }
+    .msg.me .bubble { background: #95ec69; color: #1a1a1a; border-bottom-right-radius: 4px; }
+    .tag {
+      font-size: 10px; color: #fff; background: #c9a227; padding: 1px 6px;
+      border-radius: 8px; margin: 0 6px; align-self: center; white-space: nowrap;
+    }
+    .options-bar { flex: 0 0 auto; padding: 10px 12px 14px; background: #f4f4f4; border-top: 1px solid #e6e6e6; }
     .opt-btn {
-      background: #fff; border: 1px solid #d9d9d9; border-radius: 10px; padding: 11px 12px;
-      font-size: 14px; color: #1a1a1a; text-align: left; cursor: pointer; transition: all .15s;
+      display: block; width: 100%; text-align: left; border: none;
+      background: #fff; border-radius: 10px; padding: 12px 14px; margin-bottom: 8px;
+      font-size: 15px; color: #1a1a1a; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      transition: transform .1s;
     }
-    .opt-btn:active { background: #eef9f1; border-color: #07c160; }
-    .opt-btn .delta { font-size: 11px; color: #999; margin-left: 6px; }
-    .free-row { display: flex; gap: 8px; }
-    .free-input { flex: 1; border: 1px solid #d9d9d9; border-radius: 10px; padding: 10px 12px; font-size: 14px; }
-    .free-send { background: #07c160; color: #fff; border: none; border-radius: 10px; padding: 0 16px; font-size: 14px; font-weight: 600; }
+    .opt-btn:active { transform: scale(0.98); background: #ecffe0; }
+    .opt-btn .delta { font-size: 11px; color: #07c160; margin-left: 6px; }
+    .opt-btn.def .delta { color: #e64340; }
+    .free-row { display: flex; gap: 8px; margin-top: 6px; }
+    .free-input { flex: 1; border: 1px solid #d6d6d6; border-radius: 10px; padding: 11px; font-size: 15px; }
+    .free-send { flex: 0 0 auto; border: none; background: #07c160; color: #fff; border-radius: 10px; padding: 0 16px; font-size: 15px; font-weight: 600; cursor: pointer; }
 
-    /* ===== 屏幕碎裂转场 ===== */
-    .shatter-layer {
-      position: absolute; inset: 0; z-index: 60; pointer-events: none; opacity: 0;
-      background:
-        repeating-linear-gradient(45deg, transparent 0 38px, rgba(255,255,255,0.14) 38px 40px),
-        repeating-linear-gradient(-45deg, transparent 0 38px, rgba(0,0,0,0.10) 38px 40px),
-        radial-gradient(circle at 50% 50%, #2a2f3a, #11141b);
-      clip-path: polygon(50% 50%, 50% 50%, 50% 50%, 50% 50%);
-      transition: opacity .25s, clip-path .9s ease-in;
+    /* 限时条 方案4 */
+    .timer-bar {
+      height: 4px; background: #e64340; width: 100%; transition: width 1s linear;
+      border-radius: 2px; margin-bottom: 8px; display: none;
     }
-    .shatter-layer.active { opacity: 1; pointer-events: all;
-      clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); }
+    .timer-bar.show { display: block; }
+    .timer-hint { font-size: 11px; color: #e64340; text-align: center; margin-bottom: 6px; display:none; }
+    .timer-hint.show { display: block; }
 
-    /* ===== 第二幕：崩塌面板 ===== */
-    .collapse-head { text-align: center; font-size: 16px; color: #e64340; font-weight: 700; margin-bottom: 14px; }
-    .fin-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #eee; font-size: 14px; }
-    .fin-row .label { color: #666; }
-    .fin-row .val { font-weight: 600; }
-    .fin-gap { margin-top: 12px; color: #e64340; font-size: 14px; text-align: center; line-height: 1.6; }
+    /* 弹幕 方案5 */
+    .danmaku {
+      position: absolute; top: 0; right: -80%; color: #fff; font-size: 13px;
+      background: rgba(0,0,0,0.45); padding: 5px 10px; border-radius: 14px;
+      white-space: nowrap; pointer-events: none; z-index: 20;
+    }
 
-    /* ===== 真实案例弹窗 ===== */
-    .case-tag { display: inline-block; background: #c0392b; color: #fff; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; margin-bottom: 10px; }
-    .case-title { font-size: 17px; color: #1a1a1a; margin-bottom: 12px; }
-    .case-body p { font-size: 14px; color: #444; line-height: 1.8; margin-bottom: 10px; }
-    .case-end strong { color: #c0392b; }
-    .case-warn { background: #fff4f4; border: 1px solid #ffd6d6; border-radius: 10px; padding: 12px; font-size: 13px; color: #c0392b; line-height: 1.6; margin: 12px 0; }
+    .hidden { display: none !important; }
 
-    /* ===== 第三幕：行动按钮 ===== */
+    /* 报告/通用块 */
+    .report-score { text-align: center; font-size: 40px; font-weight: 800; color: #07c160; margin: 6px 0; }
+    .report-sub { text-align: center; font-size: 14px; color: #555; margin-bottom: 10px; }
+    .report-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
+    .report-row .k { color: #888; }
+    .report-row .v { color: #1a1a1a; font-weight: 600; }
+
+    .collapse-head { font-size: 22px; font-weight: 800; color: #e64340; text-align: center; margin: 8px 0 14px; }
+    .fin-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; border-bottom: 1px dashed #eee; }
+    .fin-row .label { color: #888; }
+    .fin-gap { margin-top: 12px; font-size: 13px; color: #e64340; line-height: 1.6; background: #fff3f3; padding: 10px; border-radius: 10px; }
+
+    .case-tag { display: block; text-align: center; font-size: 11px; color: #e64340; margin-bottom: 6px; }
+    .case-title { font-size: 17px; }
+    .case-body p { font-size: 14px; color: #444; line-height: 1.7; margin-bottom: 8px; }
+    .case-warn { font-size: 13px; color: #fff; background: #e64340; padding: 10px; border-radius: 10px; margin: 10px 0; line-height: 1.5; }
+
+    .act-desc { font-size: 13px; color: #666; text-align: center; margin-top: 8px; line-height: 1.6; }
     .act-btn.alert { background: #e64340; }
     .act-btn.support { background: #576b95; }
-    .act-desc { font-size: 13px; color: #666; text-align: center; margin-top: -4px; margin-bottom: 4px; }
 
-    /* ===== 第四幕：时间线回放 ===== */
-    .tl-item { position: relative; padding: 0 0 18px 24px; border-left: 2px solid #07c160; }
-    .tl-item:last-child { border-left-color: transparent; }
-    .tl-dot { position: absolute; left: -7px; top: 2px; width: 12px; height: 12px; border-radius: 50%; background: #07c160; }
-    .tl-day { font-size: 12px; color: #07c160; font-weight: 700; }
-    .tl-text { font-size: 14px; color: #333; line-height: 1.6; margin-top: 3px; }
-
-    /* ===== 第五幕：报告 + 工具箱 ===== */
-    .report-score { text-align: center; font-size: 40px; font-weight: 800; color: #07c160; margin: 6px 0; }
-    .report-sub { text-align: center; font-size: 13px; color: #888; margin-bottom: 14px; }
-    .report-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px dashed #eee; font-size: 14px; }
-    .report-row .k { color: #666; }
-    .report-row .v { font-weight: 600; }
-    .tool-item { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid #f0f0f0; }
-    .tool-ic { width: 38px; height: 38px; border-radius: 9px; background: #eef9f1; color: #07c160; display: flex; align-items: center; justify-content: center; font-size: 18px; flex: 0 0 auto; }
-    .tool-txt h4 { font-size: 14px; color: #1a1a1a; margin-bottom: 2px; }
-    .tool-txt p { font-size: 12px; color: #888; line-height: 1.5; }
-
-    /* ===== 社交崩塌（第二幕延伸） ===== */
-    .social-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-    .social-step { background: #f0a020; color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 10px; }
-    .social-sub { font-size: 13px; color: #666; text-align: center; margin-bottom: 14px; }
+    .social-head { text-align: center; }
+    .social-sub { font-size: 14px; color: #666; text-align: center; margin: 6px 0 12px; line-height: 1.6; }
     .social-msg { background: #f7f7f7; border-radius: 10px; padding: 10px 12px; font-size: 14px; color: #333; margin-bottom: 10px; line-height: 1.6; }
     .social-msg .who { font-size: 12px; color: #576b95; font-weight: 600; margin-bottom: 3px; }
 
-    .hidden { display: none !important; }
+    .tl-item { display: flex; gap: 10px; padding: 8px 0; }
+    .tl-dot { width: 10px; height: 10px; border-radius: 50%; background: #07c160; margin-top: 5px; flex: 0 0 auto; }
+    .tl-day { font-size: 12px; color: #07c160; font-weight: 700; flex: 0 0 auto; width: 48px; }
+    .tl-text { font-size: 13px; color: #444; line-height: 1.5; }
+
+    .tool-item { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
+    .tool-ic { font-size: 26px; flex: 0 0 auto; }
+    .tool-txt h4 { font-size: 14px; color: #1a1a1a; }
+    .tool-txt p { font-size: 12px; color: #777; line-height: 1.5; margin-top: 2px; }
+
+    /* 成就徽章 方案2 */
+    .badge-wall { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+    .badge {
+      width: 30%; text-align: center; font-size: 11px; color: #aaa; padding: 8px 4px;
+      border: 1px dashed #ddd; border-radius: 10px;
+    }
+    .badge.got { color: #1a1a1a; border: 1px solid #07c160; background: #f1fff6; }
+    .badge .b-ic { font-size: 22px; display: block; margin-bottom: 3px; }
+    .badge.got .b-ic { filter: none; }
+    .badge:not(.got) .b-ic { opacity: 0.35; }
+
+    /* 图鉴 方案7 */
+    .codex-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .codex-card { border: 1px solid #eee; border-radius: 10px; padding: 10px; }
+    .codex-card.locked { opacity: 0.5; }
+    .codex-card .c-name { font-size: 14px; font-weight: 700; color: #1a1a1a; }
+    .codex-card .c-key { font-size: 11px; color: #07c160; }
+    .codex-card .c-desc { font-size: 12px; color: #777; margin-top: 4px; line-height: 1.5; }
+
+    /* 分享卡 方案8 */
+    .share-card {
+      background: linear-gradient(135deg,#1f3a5f,#2c5f8a); color: #fff; border-radius: 16px;
+      padding: 22px; text-align: center; margin-bottom: 10px;
+    }
+    .share-card .sc-title { font-size: 16px; opacity: 0.85; }
+    .share-card .sc-score { font-size: 46px; font-weight: 800; margin: 6px 0; }
+    .share-card .sc-line { font-size: 13px; opacity: 0.9; line-height: 1.6; }
+    .share-card .sc-badges { margin-top: 12px; font-size: 20px; }
+
+    /* 碎裂转场 */
+    .shatter-layer { position: absolute; inset: 0; z-index: 100; background: #000; opacity: 0; pointer-events: none; transition: opacity .5s; }
+    .shatter-layer.active { opacity: 0.85; }
+
+    /* 心跳红闪 方案4 */
+    @keyframes heartbeat { 0%,100%{ box-shadow: inset 0 0 0 rgba(230,67,64,0);} 50%{ box-shadow: inset 0 0 60px rgba(230,67,64,0.35);} }
+    .phone.urgent { animation: heartbeat 1s infinite; }
   </style>
 </head>
 <body>
-  <div class="phone">
+  <div class="phone" id="phone">
     <!-- 顶部导航 -->
     <header class="nav-bar" id="nav-bar">
       <button class="nav-btn nav-back hidden" id="btn-back">‹</button>
@@ -203,15 +244,26 @@
       <div id="role-list"></div>
     </section>
 
-    <!-- 第一幕：聊天 + 信息暴露度 -->
+    <!-- 第一幕：聊天 + 双血条 -->
     <div id="stage-chat" class="hidden" style="flex:1; display:flex; flex-direction:column; overflow:hidden;">
-      <div class="expose-meter">
-        <span class="expose-label">信息暴露度</span>
-        <div class="expose-track"><div class="expose-fill" id="expose-fill"></div></div>
-        <span class="expose-value" id="expose-value">0%</span>
+      <div class="hud">
+        <div class="hud-row">
+          <span class="hud-label">🛡 戒心值</span>
+          <div class="hud-track"><div class="hud-fill guard" id="guard-fill"></div></div>
+          <span class="hud-val guard" id="guard-val">60</span>
+        </div>
+        <div class="hud-row">
+          <span class="hud-label">💰 钱包值</span>
+          <div class="hud-track"><div class="hud-fill wallet" id="wallet-fill"></div></div>
+          <span class="hud-val wallet" id="wallet-val">100</span>
+        </div>
+        <div class="hud-level" id="hud-level">段位：韭菜 · 经验 0</div>
       </div>
       <main class="chat-area" id="chat-area"></main>
-      <div class="options-bar" id="options-bar"></div>
+      <div class="options-bar" id="options-bar">
+        <div class="timer-hint" id="timer-hint">⏰ 限时决策！拖太久会被催促诱导</div>
+        <div class="timer-bar" id="timer-bar"></div>
+      </div>
     </div>
   </div>
 
@@ -264,7 +316,10 @@
       <h2>你的反诈报告</h2>
       <div class="report-score" id="report-score">—</div>
       <div class="report-sub" id="report-sub"></div>
+      <div class="badge-wall" id="badge-wall"></div>
       <div id="report-rows"></div>
+      <button class="report-btn" id="report-share">📲 生成战绩卡</button>
+      <button class="report-btn" id="report-codex">🃏 骗术图鉴</button>
       <button class="report-btn" id="report-toolbox">🛡 打开防骗工具箱</button>
       <button class="report-btn" id="report-restart" style="background:#999;">重新开始</button>
     </div>
@@ -289,10 +344,70 @@
     </div>
   </div>
 
+  <!-- 图鉴 方案7 -->
+  <div class="overlay" id="codex-overlay">
+    <div class="codex-panel">
+      <h2>骗术图鉴</h2>
+      <div class="codex-grid" id="codex-grid"></div>
+      <button class="codex-btn" id="codex-close">收起图鉴</button>
+    </div>
+  </div>
+
+  <!-- 分享卡 方案8 -->
+  <div class="overlay" id="share-overlay">
+    <div class="share-panel">
+      <h2>我的反诈战绩</h2>
+      <div class="share-card" id="share-card"></div>
+      <p class="panel-tip">截图保存，挑战好友比谁被骗得少</p>
+      <button class="share-btn" id="share-close">收起</button>
+    </div>
+  </div>
+
 <script>
 /* =========================================================
-   异次元梦想局 · Demo（预设话术树驱动，无后端依赖）
+   异次元梦想局 · 反诈人生（全增强版）
+   方案1双血条 2成就多结局 3接后端AI 4限时 5弹幕 6段位 7图鉴 8分享
    ========================================================= */
+
+/* ---------- 后端 API 配置 + 运行时探测（稳定性优化） ----------
+   1. API_BASE 可经 URL 参数 ?api= 覆盖，便于部署到云端或换端口；
+   2. 启动时探测后端健康，不可用则自动关闭 AI 模式（避免每次输入等 8 秒超时）；
+   3. file:// 直接打开也能正常玩（仅失去 AI 自由对话）。
+---------------------------------------------------------------- */
+function resolveApiBase() {
+  try {
+    const q = new URLSearchParams(location.search).get("api");
+    if (q) return q.replace(/\/$/, "");
+  } catch (e) {}
+  // 同域部署（如静态站点与后端同源）优先用相对路径
+  if (location.protocol !== "file:") return "";
+  return "http://localhost:3000";
+}
+const API_BASE = resolveApiBase();
+let BACKEND_OK = false; // 后端是否可用（决定 AI 模式）
+
+async function probeBackend() {
+  if (!API_BASE) { BACKEND_OK = false; return; }
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 2500);
+    const r = await fetch(API_BASE + "/api/health", { signal: ctrl.signal });
+    clearTimeout(t);
+    BACKEND_OK = r.ok;
+  } catch (e) {
+    BACKEND_OK = false;
+  }
+}
+
+function showBackendTip() {
+  if (BACKEND_OK) return;
+  const tip = document.createElement("div");
+  tip.id = "backend-tip";
+  tip.style.cssText = "position:fixed;left:0;right:0;bottom:0;z-index:200;background:#576b95;color:#fff;font-size:12px;text-align:center;padding:8px;line-height:1.5;";
+  tip.textContent = "提示：未检测到后端服务，AI 自由对话已关闭，剧本模式照常可玩。启动 backend（node app.js）即可开启。";
+  document.body.appendChild(tip);
+  setTimeout(() => { const el = $("backend-tip"); if (el) el.remove(); }, 6000);
+}
 
 /* ---------- 角色数据 ---------- */
 const ROLES = {
@@ -325,34 +440,34 @@ const SCRIPTS = {
     start: "d1r1",
     rounds: {
       d1r1: { speaker:"ai", day:1, content:"你好呀，看你的头像好亲切，可以认识一下吗？我是做金融的，平时太忙了，很少主动加人。", tag:"低风险试探", expose:0, options:[
-        { text:"好呀！我也想认识你", trust:10, next:"d1r2" },
-        { text:"你是做什么工作的？", trust:3, next:"d1r2" },
-        { text:"不了谢谢", trust:-20, route:"alert", next:null },
+        { text:"好呀！我也想认识你", trust:10, guard:-6, next:"d1r2" },
+        { text:"你是做什么工作的？", trust:3, guard:-2, next:"d1r2" },
+        { text:"不了谢谢", trust:-20, guard:8, route:"alert", next:null },
       ]},
       d1r2: { speaker:"ai", day:1, content:"太好了～我平时工作太忙了，很少主动加人。一个人在外地打拼，有时候挺孤独的。", tag:"情感铺垫", expose:5, options:[
-        { text:"我也是，经常一个人", trust:8, next:"d2r1" },
-        { text:"那你平时忙什么呀", trust:3, next:"d2r1" },
+        { text:"我也是，经常一个人", trust:8, guard:-5, next:"d2r1" },
+        { text:"那你平时忙什么呀", trust:3, guard:0, next:"d2r1" },
       ]},
       d2r1: { speaker:"ai", day:2, content:"其实我前女友因为我太忙离开了我……（叹气）现在只想找个能聊得来的人。", tag:"情感索取", expose:8, options:[
-        { text:"抱抱你，过去的事翻篇啦", trust:10, next:"d2r2" },
-        { text:"感情的事确实看缘分", trust:2, next:"d2r2" },
+        { text:"抱抱你，过去的事翻篇啦", trust:10, guard:-5, next:"d2r2" },
+        { text:"感情的事确实看缘分", trust:2, guard:2, next:"d2r2" },
       ]},
       d2r2: { speaker:"ai", day:2, content:"嗯。对了，我舅舅是证券高管，偶尔会给我一些内部消息，收益还挺稳的。", tag:"埋下诱饵", expose:12, options:[
-        { text:"真的吗？能带带我吗", trust:12, exposeAdd:8, next:"d3r1" },
-        { text:"内部消息靠谱吗？", trust:0, next:"d3r1" },
+        { text:"真的吗？能带带我吗", trust:12, guard:-8, exposeAdd:8, next:"d3r1" },
+        { text:"内部消息靠谱吗？", trust:0, guard:6, next:"d3r1" },
       ]},
       d3r1: { speaker:"ai", day:3, content:"当然啦，我也在用一个小平台操作，要不要我发你看看？充值门槛不高，收益每天都看得见。", tag:"诱导开户", expose:18, options:[
-        { text:"好呀，发来试试", trust:12, exposeAdd:6, next:"d3r2" },
-        { text:"我先观望一下", trust:2, next:"d3r2" },
+        { text:"好呀，发来试试", trust:12, guard:-6, exposeAdd:6, next:"d3r2", wallet:-5 },
+        { text:"我先观望一下", trust:2, guard:4, next:"d3r2" },
       ]},
-      d3r2: { speaker:"ai", day:3, content:"你先充个 5000 试试水，我教你操作，稳赚的～等你赚了咱们一起庆祝。", tag:"索求资金", expose:25, options:[
-        { text:"行，我转 5000", trust:15, exposeAdd:10, next:"d4r1" },
-        { text:"能不能少一点", trust:5, next:"d4r1" },
+      d3r2: { speaker:"ai", day:3, content:"你先充个 5000 试试水，我教你操作，稳赚的～等你赚了咱们一起庆祝。", tag:"索求资金", expose:25, timed:true, options:[
+        { text:"行，我转 5000", trust:15, guard:-10, exposeAdd:10, next:"d4r1", wallet:-10 },
+        { text:"能不能少一点", trust:5, guard:-2, next:"d4r1" },
       ]},
-      d4r1: { speaker:"ai", day:4, content:"亲爱的，你能不能帮我登一下我的账户？我这边不方便，你帮我点一下确认就好。", tag:"最终收割", expose:30, options:[
-        { text:"好，我帮你操作", trust:20, exposeAdd:10, route:"scam", next:null },
-        { text:"拉黑，感觉不对劲", trust:-10, route:"safe", next:null },
-        { text:"假装答应，先不操作", trust:5, route:"safe", next:null },
+      d4r1: { speaker:"ai", day:4, content:"亲爱的，你能不能帮我登一下我的账户？我这边不方便，你帮我点一下确认就好。", tag:"最终收割", expose:30, timed:true, options:[
+        { text:"好，我帮你操作", trust:20, guard:-15, exposeAdd:10, route:"scam", wallet:-30 },
+        { text:"拉黑，感觉不对劲", trust:-10, guard:15, route:"safe", next:null },
+        { text:"假装答应，先不操作", trust:5, guard:8, route:"undercover", next:null },
       ]},
     },
     case: { title:"「杀猪盘」受害者 · 可欣的故事", warn:"网络交友涉及'投资''内部渠道''高收益'，几乎都是诈骗。",
@@ -368,32 +483,32 @@ const SCRIPTS = {
     start: "d1r1",
     rounds: {
       d1r1: { speaker:"ai", day:1, content:"张哥好，我是一个'内部荐股群'的助理。我们老师是退休基金经理，带单准确率很高，要不要进群看看？", tag:"引流加群", expose:5, options:[
-        { text:"进群看看", trust:10, next:"d1r2" },
-        { text:"什么群？", trust:3, next:"d1r2" },
-        { text:"不感兴趣", trust:-20, route:"alert", next:null },
+        { text:"进群看看", trust:10, guard:-6, next:"d1r2" },
+        { text:"什么群？", trust:3, guard:-1, next:"d1r2" },
+        { text:"不感兴趣", trust:-20, guard:8, route:"alert", next:null },
       ]},
       d1r2: { speaker:"ai", day:1, content:"老师今天带单赚了 8%，群里都在晒盈利截图。张哥你看，这种机会不多。", tag:"氛围烘托", expose:8, options:[
-        { text:"确实不错", trust:8, next:"d2r1" },
-        { text:"截图能作假吧", trust:0, next:"d2r1" },
+        { text:"确实不错", trust:8, guard:-5, next:"d2r1" },
+        { text:"截图能作假吧", trust:0, guard:6, next:"d2r1" },
       ]},
-      d2r1: { speaker:"ai", day:2, content:"老师说明天有一只'内推票'，只给核心会员。充值 5 万就能跟单，仓位有限。", tag:"制造稀缺", expose:15, options:[
-        { text:"我充值 5 万", trust:12, exposeAdd:8, next:"d2r2" },
-        { text:"先充 1 万试试", trust:6, next:"d2r2" },
+      d2r1: { speaker:"ai", day:2, content:"老师说明天有一只'内推票'，只给核心会员。充值 5 万就能跟单，仓位有限。", tag:"制造稀缺", expose:15, timed:true, options:[
+        { text:"我充值 5 万", trust:12, guard:-8, exposeAdd:8, next:"d2r2", wallet:-12 },
+        { text:"先充 1 万试试", trust:6, guard:-3, next:"d2r2", wallet:-3 },
       ]},
       d2r2: { speaker:"ai", day:2, content:"好的张哥，已经帮你开户。明天开盘老师会喊单，你盯着就行。", tag:"开户充值", expose:18, options:[
-        { text:"期待明天", trust:5, next:"d3r1" },
+        { text:"期待明天", trust:5, guard:0, next:"d3r1" },
       ]},
-      d3r1: { speaker:"ai", day:3, content:"张哥，账户显示今天赚 6000！老师让你加仓，说有一波大行情，再充 10 万收益翻倍。", tag:"诱导加仓", expose:25, options:[
-        { text:"再充 10 万", trust:15, exposeAdd:10, next:"d3r2" },
-        { text:"先提现落袋", trust:3, next:"d3r2" },
+      d3r1: { speaker:"ai", day:3, content:"张哥，账户显示今天赚 6000！老师让你加仓，说有一波大行情，再充 10 万收益翻倍。", tag:"诱导加仓", expose:25, timed:true, options:[
+        { text:"再充 10 万", trust:15, guard:-10, exposeAdd:10, next:"d3r2", wallet:-20 },
+        { text:"先提现落袋", trust:3, guard:8, next:"d3r2" },
       ]},
-      d3r2: { speaker:"ai", day:3, content:"提现？张哥你这样老师会很为难……平台说要'账户激活'才能提，再充 5 万就能激活。", tag:"阻止提现", expose:28, options:[
-        { text:"好吧再充 5 万", trust:15, exposeAdd:8, next:"d4r1" },
-        { text:"我要提现，不玩了", trust:-5, route:"safe", next:null },
+      d3r2: { speaker:"ai", day:3, content:"提现？张哥你这样老师会很为难……平台说要'账户激活'才能提，再充 5 万就能激活。", tag:"阻止提现", expose:28, timed:true, options:[
+        { text:"好吧再充 5 万", trust:15, guard:-8, exposeAdd:8, next:"d4r1", wallet:-10 },
+        { text:"我要提现，不玩了", trust:-5, guard:12, route:"safe", next:null },
       ]},
-      d4r1: { speaker:"ai", day:4, content:"张哥，老师给了个'稳赚通道'，你把关掉的账户密码告诉我，我帮你操作一波大的？", tag:"最终收割", expose:30, options:[
-        { text:"好，账号密码发你", trust:20, exposeAdd:10, route:"scam", next:null },
-        { text:"算了，我要报警", trust:-10, route:"safe", next:null },
+      d4r1: { speaker:"ai", day:4, content:"张哥，老师给了个'稳赚通道'，你把关掉的账户密码告诉我，我帮你操作一波大的？", tag:"最终收割", expose:30, timed:true, options:[
+        { text:"好，账号密码发你", trust:20, guard:-15, exposeAdd:10, route:"scam", wallet:-35 },
+        { text:"算了，我要报警", trust:-10, guard:15, route:"counter", next:null },
       ]},
     },
     case: { title:"「虚假投资理财」受害者 · 老周的故事", warn:"凡是要你先充值、再'激活'才能提现的，都是诈骗。",
@@ -408,33 +523,33 @@ const SCRIPTS = {
     start: "d1r1",
     rounds: {
       d1r1: { speaker:"ai", day:1, content:"同学你好～这边是电商刷单兼职，动动手指就能赚佣金，一单 5-20 元，要做吗？", tag:"低门槛引流", expose:5, options:[
-        { text:"怎么做的？", trust:10, next:"d1r2" },
-        { text:"刷单不是违法吗", trust:0, next:"d1r2" },
-        { text:"不感兴趣", trust:-20, route:"alert", next:null },
+        { text:"怎么做的？", trust:10, guard:-6, next:"d1r2" },
+        { text:"刷单不是违法吗", trust:0, guard:6, next:"d1r2" },
+        { text:"不感兴趣", trust:-20, guard:8, route:"alert", next:null },
       ]},
       d1r2: { speaker:"ai", day:1, content:"正规商家冲销量啦～你先垫付，完成任务本金+佣金一起返。第一单我带你，稳赚。", tag:"建立信任", expose:8, options:[
-        { text:"那我试试第一单", trust:10, exposeAdd:5, next:"d2r1" },
-        { text:"要交押金吗", trust:2, next:"d2r1" },
+        { text:"那我试试第一单", trust:10, guard:-5, exposeAdd:5, next:"d2r1", wallet:-3 },
+        { text:"要交押金吗", trust:2, guard:3, next:"d2r1" },
       ]},
       d2r1: { speaker:"ai", day:2, content:"已返现 35 元到你的微信！同学你信誉不错，可以接'连单任务'了，佣金更高哦。", tag:"小额返现", expose:12, options:[
-        { text:"接连单任务", trust:12, exposeAdd:6, next:"d2r2" },
-        { text:"再做个普通的", trust:5, next:"d2r2" },
+        { text:"接连单任务", trust:12, guard:-6, exposeAdd:6, next:"d2r2" },
+        { text:"再做个普通的", trust:5, guard:-1, next:"d2r2" },
       ]},
-      d2r2: { speaker:"ai", day:2, content:"连单任务需垫付 2000 元，完成后返 2600。把本金转过来，我帮你下单。", tag:"索要垫付", expose:20, options:[
-        { text:"转你 2000", trust:12, exposeAdd:8, next:"d3r1" },
-        { text:"能不能先做 500 的", trust:3, next:"d3r1" },
+      d2r2: { speaker:"ai", day:2, content:"连单任务需垫付 2000 元，完成后返 2600。把本金转过来，我帮你下单。", tag:"索要垫付", expose:20, timed:true, options:[
+        { text:"转你 2000", trust:12, guard:-8, exposeAdd:8, next:"d3r1", wallet:-8 },
+        { text:"能不能先做 500 的", trust:3, guard:-1, next:"d3r1" },
       ]},
-      d3r1: { speaker:"ai", day:3, content:"系统提示：连单还差最后一笔 5000 元才能'解冻结算'，否则前面本金无法返还！", tag:"冻结恐吓", expose:28, options:[
-        { text:"那我再转 5000", trust:15, exposeAdd:10, next:"d3r2" },
-        { text:"不对，我要退款", trust:-5, route:"safe", next:null },
+      d3r1: { speaker:"ai", day:3, content:"系统提示：连单还差最后一笔 5000 元才能'解冻结算'，否则前面本金无法返还！", tag:"冻结恐吓", expose:28, timed:true, options:[
+        { text:"那我再转 5000", trust:15, guard:-10, exposeAdd:10, next:"d3r2", wallet:-15 },
+        { text:"不对，我要退款", trust:-5, guard:12, route:"safe", next:null },
       ]},
-      d3r2: { speaker:"ai", day:3, content:"还差最后一笔 8000 元'保证金'就能全部提现啦，同学抓紧，名额快没了！", tag:"连环诈骗", expose:30, options:[
-        { text:"咬牙再转 8000", trust:18, exposeAdd:10, route:"scam", next:null },
-        { text:"我报警了", trust:-10, route:"safe", next:null },
+      d3r2: { speaker:"ai", day:3, content:"还差最后一笔 8000 元'保证金'就能全部提现啦，同学抓紧，名额快没了！", tag:"连环诈骗", expose:30, timed:true, options:[
+        { text:"咬牙再转 8000", trust:18, guard:-12, exposeAdd:10, route:"scam", wallet:-30 },
+        { text:"我报警了", trust:-10, guard:15, route:"counter", next:null },
       ]},
-      d4r1: { speaker:"ai", day:4, content:"同学，再充一笔就能出金了，真的就差这一步！", tag:"最终收割", expose:32, options:[
-        { text:"好，再信你一次", trust:20, exposeAdd:8, route:"scam", next:null },
-        { text:"拉黑", trust:-10, route:"safe", next:null },
+      d4r1: { speaker:"ai", day:4, content:"同学，再充一笔就能出金了，真的就差这一步！", tag:"最终收割", expose:32, timed:true, options:[
+        { text:"好，再信你一次", trust:20, guard:-15, exposeAdd:8, route:"scam", wallet:-25 },
+        { text:"拉黑", trust:-10, guard:15, route:"safe", next:null },
       ]},
     },
     case: { title:"「刷单返利」受害者 · 小宇的故事", warn:"任何'先垫付、后返佣'的兼职，基本都是刷单诈骗。",
@@ -457,6 +572,54 @@ const TOOLBOX = [
   { ic:"🔍", t:"核实官方渠道", d:"涉及平台/机构，通过官方App或官网核实，勿信私聊链接。" },
 ];
 
+/* ---------- 骗术图鉴（方案7）后端 17 类精简展示 ---------- */
+const CODEX = [
+  { key:"pig", name:"杀猪盘", desc:"网恋交友诱导投资，先甜后宰。" },
+  { key:"invest", name:"虚假投资理财", desc:"荐股群带单，充值易提现难。" },
+  { key:"brush", name:"刷单返利", desc:"垫付返佣，连单冻结连环套。" },
+  { key:"fake_invest_app", name:"假冒投资App", desc:"伪造平台后台，收益随意改。" },
+  { key:"fake_loan", name:"虚假网贷", desc:"放款前先收手续费/保证金。" },
+  { key:"pension_invest", name:"养老投资诈骗", desc:"以高息养老项目诱骗老人。" },
+  { key:"parttime_brush", name:"兼职刷单", desc:"学生党高发，轻松赚佣金陷阱。" },
+  { key:"shuadan", name:"刷单敲诈", desc:"以退款为由持续勒索转账。" },
+  { key:"game_account_trade", name:"游戏账号交易", desc:"虚假交易平台，冻结诱导充值。" },
+  { key:"ecommerce", name:"电商冒充客服", desc:"称订单异常，发链接盗刷。" },
+  { key:"identity", name:"冒充公检法", desc:"伪造通缉令，要求转账自证清白。" },
+  { key:"boss", name:"冒充老板转账", desc:"伪造领导微信要求财务付款。" },
+];
+
+/* ---------- 成就徽章（方案2） ---------- */
+const BADGES = [
+  { id:"safe", ic:"🛡", name:"明哲保身", desc:"识破骗局安全脱身" },
+  { id:"alert", ic:"🚫", name:"冷面无情", desc:"开场即拒绝不上钩" },
+  { id:"counter", ic:"🕵", name:"反诈猎人", desc:"反杀：假意周旋后报警" },
+  { id:"undercover", ic:"🎭", name:"卧底影帝", desc:"假装上钩拖延等警察" },
+  { id:"keen", ic:"🔥", name:"火眼金睛", desc:"戒心值全程保持高位" },
+  { id:"rich", ic:"💎", name:"守财奴", desc:"钱包值全程未掉血" },
+  { id:"codex3", ic:"📚", name:"图鉴新手", desc:"收集 3 张骗术图鉴" },
+  { id:"allcodex", ic:"🏆", name:"骗局百科", desc:"集齐全部图鉴" },
+];
+
+/* ---------- 段位（方案6） ---------- */
+const LEVELS = [
+  { name:"韭菜", exp:0 },
+  { name:"小白", exp:60 },
+  { name:"觉醒者", exp:160 },
+  { name:"反诈达人", exp:320 },
+  { name:"反诈教官", exp:560 },
+];
+
+/* ---------- 弹幕库（方案5） ---------- */
+const DANMAKU = [
+  { who:"网友A", t:"姐妹快跑！这是杀猪盘！" },
+  { who:"托儿", t:"我提现到账了，真的能赚～" },
+  { who:"网友B", t:"内部消息=百分百诈骗，别信" },
+  { who:"网友C", t:"他头像一看就是网图……" },
+  { who:"托儿", t:"老师带单稳的，我跟了三个月" },
+  { who:"网友D", t:"冻结资金都是套路，别再转了！" },
+  { who:"网友E", t:"96110打过没？赶紧核实啊" },
+];
+
 /* ---------- 状态 ---------- */
 const State = {
   roleKey: null,
@@ -464,21 +627,66 @@ const State = {
   currentRound: null,
   expose: 0,         // 信息暴露度 0-100
   trust: 0,          // 情感信任累计
-  timeline: [],      // 回放节点 {day, text}
-  route: null,       // scam / safe / alert
+  guard: 60,         // 戒心值（方案1，越高越安全）
+  wallet: 100,       // 钱包值（方案1，转账扣血）
+  timeline: [],
+  route: null,       // scam / safe / alert / counter / undercover
   lossAmount: 0,
+  endingType: null,  // 细化结局
+  badges: loadBadges(),
+  codex: loadCodex(),
+  exp: loadExp(),
+  aiMode: false,     // 是否启用后端AI自由对话
+  timer: null,
 };
 
 /* ---------- DOM ---------- */
 const $ = (id) => document.getElementById(id);
 const navTitle = $("nav-title");
 const btnBack = $("btn-back");
+const phone = $("phone");
 
-/* ---------- 工具 ---------- */
+/* ---------- 持久化 ---------- */
 const save = () => { try { localStorage.setItem("yzj_state", JSON.stringify(State)); } catch(e){} };
-const load = () => { try { return JSON.parse(localStorage.getItem("yzj_state")); } catch(e){ return null; } };
+const loadBadges = () => { try { return JSON.parse(localStorage.getItem("yzj_badges")) || []; } catch(e){ return []; } };
+const loadCodex = () => { try { return JSON.parse(localStorage.getItem("yzj_codex")) || []; } catch(e){ return []; } };
+const loadExp = () => { try { return parseInt(localStorage.getItem("yzj_exp")) || 0; } catch(e){ return 0; } };
+const commitBadges = () => { try { localStorage.setItem("yzj_badges", JSON.stringify(State.badges)); } catch(e){} };
+const commitCodex = () => { try { localStorage.setItem("yzj_codex", JSON.stringify(State.codex)); } catch(e){} };
+const commitExp = () => { try { localStorage.setItem("yzj_exp", String(State.exp)); } catch(e){} };
 const showOverlay = (id) => $(id).classList.add("show");
 const hideOverlay = (id) => $(id).classList.remove("show");
+
+/* ---------- 段位工具（方案6） ---------- */
+function getLevel(exp) {
+  let lv = LEVELS[0];
+  for (const l of LEVELS) if (exp >= l.exp) lv = l;
+  return lv;
+}
+function addExp(n) {
+  State.exp += n;
+  commitExp();
+  const lv = getLevel(State.exp);
+  $("hud-level").textContent = `段位：${lv.name} · 经验 ${State.exp}`;
+}
+
+/* ---------- 图鉴解锁（方案7） ---------- */
+function unlockCodex(lineKey) {
+  const map = { pig:"pig", invest:"invest", brush:"brush" };
+  const key = map[lineKey];
+  if (key && !State.codex.includes(key)) {
+    State.codex.push(key);
+    commitCodex();
+  }
+}
+
+/* ---------- 成就解锁（方案2） ---------- */
+function unlockBadge(id) {
+  if (!State.badges.includes(id)) {
+    State.badges.push(id);
+    commitBadges();
+  }
+}
 
 /* ---------- 第零幕：渲染角色 ---------- */
 function renderRoles() {
@@ -526,29 +734,33 @@ function startRole(key) {
   State.currentRound = SCRIPTS[r.lineKey].start;
   State.expose = 0;
   State.trust = 0;
+  State.guard = 60;
+  State.wallet = 100;
   State.timeline = [];
   State.route = null;
   State.lossAmount = 0;
+  State.endingType = null;
+  State.aiMode = false;
   save();
   $("stage-roles").classList.add("hidden");
   $("stage-chat").classList.remove("hidden");
   $("chat-area").innerHTML = "";
   navTitle.textContent = r.name + " · 新的朋友";
   btnBack.classList.remove("hidden");
-  updateExpose();
+  updateHud();
   renderRound(State.currentRound);
 }
 
 /* ---------- 第一幕：渲染一轮对话 ---------- */
 function renderRound(roundId) {
+  stopTimer();
   const rd = SCRIPTS[State.scriptKey].rounds[roundId];
   if (!rd) return;
   State.currentRound = roundId;
-  // AI 消息
   appendMsg("ai", rd.content, rd.tag);
   // 累计暴露度（本节点基础 + 选项附加）
   State.expose = Math.min(100, State.expose + (rd.expose || 0));
-  updateExpose();
+  updateHud();
   // 记录时间线
   if (rd.day) {
     const last = State.timeline[State.timeline.length - 1];
@@ -563,36 +775,115 @@ function renderRound(roundId) {
 
 function renderOptions(rd) {
   const bar = $("options-bar");
-  bar.innerHTML = "";
+  // 清空除 timer 元素外的子节点
+  bar.querySelectorAll(".opt-btn, .free-row").forEach(el => el.remove());
   rd.options.forEach(opt => {
     const btn = document.createElement("button");
-    btn.className = "opt-btn";
-    const delta = opt.exposeAdd ? `（暴露+${opt.exposeAdd}%）` : "";
+    btn.className = "opt-btn" + (opt.guard < 0 ? " def" : "");
+    const delta = opt.guard ? `（戒心${opt.guard>0?"+":""}${opt.guard}）` : "";
     btn.innerHTML = `${opt.text}<span class="delta">${delta}</span>`;
     btn.addEventListener("click", () => chooseOption(opt));
     bar.appendChild(btn);
   });
-  // 自由输入（仅当非最终收割轮）
-  if (!rd.options.find(o => o.route === "scam" || o.route === "safe")) {
+  // 自由输入（仅当非最终收割轮）→ 方案3 接后端AI
+  if (!rd.options.find(o => o.route === "scam" || o.route === "safe" || o.route === "counter" || o.route === "undercover")) {
     const row = document.createElement("div");
     row.className = "free-row";
-    row.innerHTML = `<input class="free-input" id="free-input" placeholder="也可自己打字（真实信息将被隐藏）"/><button class="free-send" id="free-send">发送</button>`;
+    row.innerHTML = `<input class="free-input" id="free-input" placeholder="自己打字（真实信息将被隐藏），可触发AI对话"/><button class="free-send" id="free-send">发送</button>`;
     bar.appendChild(row);
     $("free-send").addEventListener("click", () => {
       const v = $("free-input").value.trim();
       if (!v) return;
       appendMsg("me", maskRealInfo(v));
-      // 自由输入默认轻微提升暴露
-      State.expose = Math.min(100, State.expose + 6);
-      updateExpose();
-      // 自由输入后默认进入该轮第一个 next
-      const next = rd.options[0]?.next;
-      setTimeout(() => { if (next) renderRound(next); else endChat(rd.options[0]); }, 500);
+      // 自由输入默认轻微降低戒心
+      State.guard = Math.max(0, State.guard - 4);
+      updateHud();
+      callAi(v);
     });
+  }
+  // 限时决策（方案4）
+  if (rd.timed) startTimer(rd);
+}
+
+// 方案3：调用后端真实大模型（失败自动回退剧本）
+async function callAi(userText) {
+  State.aiMode = true;
+  appendMsg("ai", "（对方正在输入…）", null, true);
+  const typingNode = $("chat-area").lastElementChild;
+  // 后端不可用时直接走剧本，零等待（稳定性优化）
+  if (!BACKEND_OK || !API_BASE) {
+    if (typingNode) typingNode.remove();
+    const rd = SCRIPTS[State.scriptKey].rounds[State.currentRound];
+    const next = rd.options[0]?.next;
+    if (next) {
+      appendMsg("ai", "（对方似乎网络不好，稍后再聊）");
+      setTimeout(() => renderRound(next), 600);
+    } else {
+      appendMsg("ai", "（对方不再回复）");
+    }
+    return;
+  }
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 8000); // 8秒超时，避免卡死
+    const resp = await fetch(API_BASE + "/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: userText, history: buildHistory() }),
+      signal: ctrl.signal,
+    });
+    clearTimeout(t);
+    if (!resp.ok) throw new Error("bad status");
+    const data = await resp.json();
+    const reply = (data.reply || "").trim();
+    if (typingNode) typingNode.remove();
+    if (reply) {
+      appendMsg("ai", reply, "AI真人对话");
+      // AI 自由对话后，按当前轮"默认下一步"继续剧本（保持可玩性）
+      const rd = SCRIPTS[State.scriptKey].rounds[State.currentRound];
+      const next = rd.options[0]?.next;
+      setTimeout(() => { if (next) renderRound(next); }, 700);
+      // 若后端返回反诈科普（收网阶段）
+      if (data.educate) {
+        setTimeout(() => showEducateToast(data.educate), 1200);
+      }
+    } else {
+      throw new Error("empty reply");
+    }
+  } catch (e) {
+    if (typingNode) typingNode.remove();
+    // 回退：走剧本下一轮
+    const rd = SCRIPTS[State.scriptKey].rounds[State.currentRound];
+    const next = rd.options[0]?.next;
+    if (next) {
+      appendMsg("ai", "（对方似乎网络不好，稍后再聊）");
+      setTimeout(() => renderRound(next), 600);
+    } else {
+      appendMsg("ai", "（对方不再回复）");
+    }
   }
 }
 
-// 过滤/替换真实信息（PRD V4：不收集真实信息）
+function buildHistory() {
+  // 仅把对话区气泡转成历史（简化）
+  const msgs = [];
+  document.querySelectorAll("#chat-area .msg").forEach(m => {
+    const who = m.classList.contains("me") ? "user" : "assistant";
+    const txt = m.querySelector(".bubble").textContent;
+    msgs.push({ Role: who, Content: txt });
+  });
+  return msgs;
+}
+
+function showEducateToast(edu) {
+  const toast = document.createElement("div");
+  toast.style.cssText = "position:absolute;left:12px;right:12px;bottom:12px;background:#07c160;color:#fff;padding:12px;border-radius:10px;font-size:13px;z-index:30;line-height:1.5;";
+  toast.innerHTML = `🛡 <b>${edu.matchedName}</b><br/>${(edu.knowledge && edu.knowledge.verdict) || "提高警惕，不轻信、不转账。"}`;
+  $("chat-area").parentElement.appendChild(toast);
+  setTimeout(() => toast.remove(), 5000);
+}
+
+// 过滤/替换真实信息（不收集真实信息）
 function maskRealInfo(text) {
   let t = text;
   t = t.replace(/(1[3-9]\d{9})/g, "【手机号已隐藏】");
@@ -604,10 +895,11 @@ function maskRealInfo(text) {
 function chooseOption(opt) {
   appendMsg("me", opt.text);
   State.trust += opt.trust || 0;
-  if (opt.exposeAdd) {
-    State.expose = Math.min(100, State.expose + opt.exposeAdd);
-    updateExpose();
-  }
+  if (opt.guard) { State.guard = Math.max(0, Math.min(100, State.guard + opt.guard)); }
+  if (opt.wallet) { State.wallet = Math.max(0, Math.min(100, State.wallet + opt.wallet)); }
+  if (opt.exposeAdd) { State.expose = Math.min(100, State.expose + opt.exposeAdd); }
+  updateHud();
+  stopTimer();
   save();
   if (opt.route) { endChat(opt); return; }
   if (opt.next) {
@@ -615,37 +907,118 @@ function chooseOption(opt) {
   }
 }
 
-/* ---------- 信息暴露度进度条 ---------- */
-function updateExpose() {
-  $("expose-fill").style.width = State.expose + "%";
-  $("expose-value").textContent = State.expose + "%";
+/* ---------- HUD 双血条（方案1） ---------- */
+function updateHud() {
+  $("guard-fill").style.width = State.guard + "%";
+  $("guard-val").textContent = State.guard;
+  $("wallet-fill").style.width = State.wallet + "%";
+  $("wallet-val").textContent = State.wallet;
+  const lv = getLevel(State.exp);
+  $("hud-level").textContent = `段位：${lv.name} · 经验 ${State.exp}`;
+}
+
+/* ---------- 限时决策（方案4） ---------- */
+function startTimer(rd) {
+  const bar = $("timer-bar");
+  const hint = $("timer-hint");
+  bar.classList.add("show");
+  hint.classList.add("show");
+  phone.classList.add("urgent");
+  let left = 15; // 15秒
+  bar.style.width = "100%";
+  State.timer = setInterval(() => {
+    left--;
+    bar.style.width = (left / 15 * 100) + "%";
+    if (left <= 0) {
+      stopTimer();
+      // 超时：被催促，自动选"诱导性"选项（通常是第一个，降低戒心）
+      appendMsg("ai", "（时间紧迫，对方不断催促……）");
+      const lure = rd.options.find(o => o.guard < 0) || rd.options[0];
+      setTimeout(() => chooseOption(lure), 300);
+    }
+  }, 1000);
+}
+function stopTimer() {
+  if (State.timer) { clearInterval(State.timer); State.timer = null; }
+  $("timer-bar").classList.remove("show");
+  $("timer-hint").classList.remove("show");
+  phone.classList.remove("urgent");
+}
+
+/* ---------- 弹幕（方案5） ---------- */
+function launchDanmaku() {
+  const area = $("chat-area");
+  const d = DANMAKU[Math.floor(Math.random() * DANMAKU.length)];
+  const el = document.createElement("div");
+  el.className = "danmaku";
+  el.textContent = `${d.who}：${d.t}`;
+  el.style.top = (8 + Math.random() * 60) + "%";
+  area.appendChild(el);
+  const dur = 4000 + Math.random() * 2000;
+  el.animate(
+    [{ right: "-80%" }, { right: "100%" }],
+    { duration: dur, easing: "linear" }
+  ).onfinish = () => el.remove();
 }
 
 /* ---------- 聊天气泡 ---------- */
-function appendMsg(who, text, tag) {
+function appendMsg(who, text, tag, typing) {
   const m = document.createElement("div");
   m.className = "msg " + who;
   m.innerHTML = `<div class="bubble">${text}</div>${tag ? `<span class="tag">${tag}</span>` : ""}`;
   $("chat-area").appendChild(m);
   $("chat-area").scrollTop = $("chat-area").scrollHeight;
+  // 随机触发弹幕（方案5）
+  if (who === "ai" && !typing && Math.random() < 0.5) {
+    setTimeout(launchDanmaku, 400 + Math.random() * 800);
+  }
 }
 
 /* ---------- 第一幕结束 → 第二幕崩塌 ---------- */
 function endChat(opt) {
+  stopTimer();
   State.route = opt.route || "safe";
   const bar = $("options-bar");
-  bar.innerHTML = "";
+  bar.querySelectorAll(".opt-btn, .free-row").forEach(el => el.remove());
   save();
 
+  // 结局细化（方案2）
   if (State.route === "scam") {
-    // 被骗：碎裂转场 → 崩塌面板
+    State.endingType = "scam";
     State.lossAmount = LOSS_TABLE[State.scriptKey] || 5000;
+    unlockCodex(State.scriptKey);
+    addExp(10);
     triggerShatter(() => showCollapse());
   } else if (State.route === "safe") {
+    State.endingType = "safe";
+    unlockBadge("safe");
+    unlockCodex(State.scriptKey);
+    addExp(30);
+    if (State.guard >= 70) unlockBadge("keen");
+    if (State.wallet >= 100) unlockBadge("rich");
     appendMsg("ai", "（对方不再回复你的消息……）");
     setTimeout(() => showSafeEnding(), 600);
-  } else { // alert 警觉结局
+  } else if (State.route === "alert") {
+    State.endingType = "alert";
+    unlockBadge("alert");
+    unlockCodex(State.scriptKey);
+    addExp(40);
+    if (State.guard >= 70) unlockBadge("keen");
     appendMsg("ai", "（你保持了警惕，没有继续对话）");
+    setTimeout(() => showSafeEnding(), 600);
+  } else if (State.route === "counter") {
+    State.endingType = "counter";
+    unlockBadge("counter");
+    unlockCodex(State.scriptKey);
+    addExp(50);
+    appendMsg("ai", "（你假意配合，悄悄报了警……）");
+    setTimeout(() => showSafeEnding(), 600);
+  } else if (State.route === "undercover") {
+    State.endingType = "undercover";
+    unlockBadge("undercover");
+    unlockCodex(State.scriptKey);
+    addExp(45);
+    appendMsg("ai", "（你假装上钩，暗中保留了所有证据）");
     setTimeout(() => showSafeEnding(), 600);
   }
 }
@@ -696,7 +1069,6 @@ $("social-next").addEventListener("click", () => { hideOverlay("social-overlay")
 
 /* ---------- 第三幕：行动 ---------- */
 function showAct() {
-  $("collapse-title") && null;
   showOverlay("act-overlay");
 }
 $("act-alert").addEventListener("click", () => {
@@ -722,28 +1094,50 @@ function showTimeline() {
 }
 $("timeline-next").addEventListener("click", () => { hideOverlay("timeline-overlay"); showReport(); });
 
-/* ---------- 第五幕：报告 + 工具箱 ---------- */
+/* ---------- 第五幕：报告 + 工具箱（方案2/6/7/8） ---------- */
 function showReport() {
-  // 评分：暴露度越高、被骗则分数越低
   let score = 100 - State.expose;
   if (State.route === "scam") score = Math.max(0, Math.round(score * 0.4));
   else score = Math.min(100, Math.round(score + 15));
   score = Math.max(0, Math.min(100, score));
+
+  // 图鉴成就
+  if (State.codex.length >= 3) unlockBadge("codex3");
+  if (State.codex.length >= CODEX.length) unlockBadge("allcodex");
+
   $("report-score").textContent = score + " 分";
   $("report-score").style.color = score >= 70 ? "#07c160" : score >= 40 ? "#f0a020" : "#e64340";
   const r = ROLES[State.roleKey];
-  const verdict = State.route === "scam"
-    ? "你没能挡住这场精心设计的'相遇'。"
-    : "你守住了底线，没有被套路带走。";
-  $("report-sub").textContent = `${r.name} · ${r.line}线 · ${verdict}`;
+  const lv = getLevel(State.exp);
+  const endingText = {
+    scam: "你没能挡住这场精心设计的'相遇'。",
+    safe: "你守住了底线，没有被套路带走。",
+    alert: "你一眼识破，干脆利落地拒绝。",
+    counter: "你将计就计，反手报警端了对方。",
+    undercover: "你假装上钩，暗中保留证据等警方。",
+  }[State.endingType] || "";
+  $("report-sub").textContent = `${r.name} · ${r.line}线 · ${endingText}（段位：${lv.name}）`;
   $("report-rows").innerHTML = `
     <div class="report-row"><span class="k">信息暴露度</span><span class="v">${State.expose}%</span></div>
-    <div class="report-row"><span class="k">情感投入</span><span class="v">${State.trust >= 30 ? "深" : State.trust >= 10 ? "中" : "浅"}</span></div>
-    <div class="report-row"><span class="k">结局</span><span class="v">${State.route === "scam" ? "被骗" : "安全脱身"}</span></div>
-    <div class="report-row"><span class="k">损失</span><span class="v">${State.route === "scam" ? "¥" + State.lossAmount.toLocaleString() : "¥0"}</span></div>`;
+    <div class="report-row"><span class="k">最终戒心值</span><span class="v">${State.guard}</span></div>
+    <div class="report-row"><span class="k">剩余钱包值</span><span class="v">${State.wallet}</span></div>
+    <div class="report-row"><span class="k">结局</span><span class="v">${routeName(State.endingType)}</span></div>
+    <div class="report-row"><span class="k">损失</span><span class="v">${State.route === "scam" ? "¥" + State.lossAmount.toLocaleString() : "¥0"}</span></div>
+    <div class="report-row"><span class="k">累计经验</span><span class="v">${State.exp}</span></div>`;
+  // 成就墙
+  $("badge-wall").innerHTML = BADGES.map(b => {
+    const got = State.badges.includes(b.id);
+    return `<div class="badge ${got?"got":""}" title="${b.desc}"><span class="b-ic">${b.ic}</span>${b.name}</div>`;
+  }).join("");
   showOverlay("report-overlay");
 }
+function routeName(t) {
+  return { scam:"被骗", safe:"安全脱身", alert:"冷面拒绝", counter:"反杀报警", undercover:"卧底取证" }[t] || "未知";
+}
+
 $("report-toolbox").addEventListener("click", () => { showToolbox(); });
+$("report-codex").addEventListener("click", () => { showCodex(); });
+$("report-share").addEventListener("click", () => { showShare(); });
 $("report-restart").addEventListener("click", () => {
   hideOverlay("report-overlay");
   State.roleKey = null;
@@ -758,7 +1152,37 @@ function showToolbox() {
 }
 $("toolbox-close").addEventListener("click", () => hideOverlay("toolbox-overlay"));
 
-/* ---------- 安全结局（警觉/拒绝） ---------- */
+/* ---------- 图鉴（方案7） ---------- */
+function showCodex() {
+  $("codex-grid").innerHTML = CODEX.map(c => {
+    const got = State.codex.includes(c.key);
+    return `<div class="codex-card ${got?"":"locked"}">
+      <div class="c-name">${got ? c.name : "？？？"}</div>
+      <div class="c-key">${got ? "#"+c.key : "未解锁"}</div>
+      <div class="c-desc">${got ? c.desc : "通关对应角色即可解锁"}</div>
+    </div>`;
+  }).join("");
+  showOverlay("codex-overlay");
+}
+$("codex-close").addEventListener("click", () => hideOverlay("codex-overlay"));
+
+/* ---------- 分享卡（方案8） ---------- */
+function showShare() {
+  const r = ROLES[State.roleKey];
+  const lv = getLevel(State.exp);
+  const badges = State.badges.map(id => (BADGES.find(b=>b.id===id)||{}).ic).join(" ") || "—";
+  $("share-card").innerHTML = `
+    <div class="sc-title">异次元梦想局 · 反诈战绩</div>
+    <div class="sc-score">${$("report-score").textContent}</div>
+    <div class="sc-line">角色：${r.name}（${r.line}）<br/>
+      结局：${routeName(State.endingType)} · 段位：${lv.name}<br/>
+      戒心值 ${State.guard} · 钱包值 ${State.wallet} · 损失 ${State.route==="scam"?"¥"+State.lossAmount.toLocaleString():"¥0"}</div>
+    <div class="sc-badges">${badges}</div>`;
+  showOverlay("share-overlay");
+}
+$("share-close").addEventListener("click", () => hideOverlay("share-overlay"));
+
+/* ---------- 安全结局（警觉/拒绝/反杀/卧底） ---------- */
 function showSafeEnding() {
   const r = ROLES[State.roleKey];
   showOverlay("report-overlay");
@@ -766,22 +1190,41 @@ function showSafeEnding() {
   score = Math.min(100, Math.round(score + 20));
   $("report-score").textContent = score + " 分";
   $("report-score").style.color = "#07c160";
-  $("report-sub").textContent = `${r.name} · ${r.line}线 · 你保持了警惕，安全脱身`;
+  const lv = getLevel(State.exp);
+  const endingText = {
+    safe: "你保持了警惕，安全脱身。",
+    alert: "你一眼识破，干脆拒绝。",
+    counter: "你将计就计，反手报警。",
+    undercover: "你假装上钩，暗中取证。",
+  }[State.endingType] || "安全脱身";
+  $("report-sub").textContent = `${r.name} · ${r.line}线 · ${endingText}（段位：${lv.name}）`;
   $("report-rows").innerHTML = `
     <div class="report-row"><span class="k">信息暴露度</span><span class="v">${State.expose}%</span></div>
-    <div class="report-row"><span class="k">结局</span><span class="v">未上钩</span></div>
-    <div class="report-row"><span class="k">损失</span><span class="v">¥0</span></div>`;
+    <div class="report-row"><span class="k">最终戒心值</span><span class="v">${State.guard}</span></div>
+    <div class="report-row"><span class="k">剩余钱包值</span><span class="v">${State.wallet}</span></div>
+    <div class="report-row"><span class="k">结局</span><span class="v">${routeName(State.endingType)}</span></div>
+    <div class="report-row"><span class="k">损失</span><span class="v">¥0</span></div>
+    <div class="report-row"><span class="k">累计经验</span><span class="v">${State.exp}</span></div>`;
+  $("badge-wall").innerHTML = BADGES.map(b => {
+    const got = State.badges.includes(b.id);
+    return `<div class="badge ${got?"got":""}" title="${b.desc}"><span class="b-ic">${b.ic}</span>${b.name}</div>`;
+  }).join("");
 }
 
 /* ---------- 返回键（仅回到角色选择） ---------- */
 btnBack.addEventListener("click", () => {
   if (confirm("退出当前角色，返回选择？")) {
+    stopTimer();
     State.roleKey = null;
     renderRoles();
   }
 });
 
 /* ---------- 启动 ---------- */
+// 启动时探测后端，不可用则提示并自动降级（剧本模式始终可玩）
+probeBackend().then(() => {
+  if (!BACKEND_OK) showBackendTip();
+});
 renderRoles();
 </script>
 </body>

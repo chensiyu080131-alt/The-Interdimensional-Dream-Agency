@@ -27,6 +27,17 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 
+/* ------------------------------------------------------------
+ * 进程级稳定性兜底（避免单点异常导致整个服务退出）
+ * ---------------------------------------------------------- */
+process.on("uncaughtException", (err) => {
+  // 记录但不退出进程，保证已建立的对话/接口仍可服务
+  console.error("[稳定性] 捕获未处理异常（已忽略，服务继续运行）：", err && err.message);
+});
+process.on("unhandledRejection", (reason) => {
+  console.error("[稳定性] 捕获未处理的 Promise 拒绝（已忽略）：", reason && (reason.message || reason));
+});
+
 // 可选的腾讯混元 SDK（仅在使用 hunyuan provider 时需要）
 let HunyuanClient = null;
 try {
@@ -38,6 +49,14 @@ try {
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+/* ------------------------------------------------------------
+ * 静态托管前端（单一进程即可运行，提升部署稳定性）
+ * 访问 http://localhost:3000/ 即打开游戏；/api/* 仍走后端接口
+ * ---------------------------------------------------------- */
+const path = require("path");
+const FRONTEND_DIR = path.join(__dirname, "..", "frontend");
+app.use(express.static(FRONTEND_DIR));
 
 /* ------------------------------------------------------------
  * 中间件：CORS 跨域 + 请求体解析
@@ -483,35 +502,139 @@ const ANTI_FRAUD_RHYME = `陌生电话短信多警惕；中奖退税、暴利理
 
 /* ------------------------------------------------------------
  * 骗子人设 System Prompt
+ * 多行业领域角色：每个角色对应一类高发诈骗场景，
+ * 拥有专属身份背景、聊天风格与收网时暴露的骗局特征。
+ *   field     —— 角色所在行业领域
+ *   fieldDesc —— 该行业的诈骗切入点（融入聊天话术）
+ *   style     —— 角色语气/性格关键词，用于塑造差异化的聊天风格
+ *   fraudType —— 收网阶段最贴合的骗局类型 key（见 RECENT_FRAUD_TYPES / FRAUD_TYPES）
+ *   traits    —— 角色标志性人设细节，注入 System Prompt 增强沉浸感
  * ---------------------------------------------------------- */
-const PERSONAS = ["35岁投行精英", "退伍军人创业者", "30岁外科医生"];
+const PERSONAS = [
+  {
+    id: "finance",
+    name: "35岁投行精英",
+    field: "金融投资",
+    fieldDesc: "以'内部消息、稳赚高息、私募额度'为切入点，把投资理财伪装成朋友圈晒收益。",
+    style: "干练、自信、偶尔凡尔赛，爱用专业术语包装，循序渐进抛出'稳赚机会'。",
+    fraudType: "fake_invest_app",
+    traits: "常驻陆家嘴，开保时捷，朋友圈全是米其林和度假照，口头禅'钱生钱才自由'。",
+  },
+  {
+    id: "vet",
+    name: "退伍军人创业者",
+    field: "实体创业加盟",
+    fieldDesc: "以'军旅兄弟情、国家扶持项目、低门槛加盟'为切入点，呼吁'一起干票大的'。",
+    style: "豪爽、讲义气、直来直去，善用战友情/兄弟情拉近距离，谈钱直白。",
+    fraudType: "fake_loan",
+    traits: "退伍后做'军创项目'，爱发训练旧照，口头禅'当兵的人不骗自己人'。",
+  },
+  {
+    id: "doctor",
+    name: "30岁外科医生",
+    field: "医疗美容/健康养生",
+    fieldDesc: "以'医院内部渠道、特价医美项目、私密体检'为切入点，借专业身份建立信任。",
+    style: "温和、专业、令人安心，善用'为你好'的关怀口吻，潜移默化推销项目。",
+    fraudType: "pension_invest",
+    traits: "三甲医院主治，朋友圈科普养生，口头禅'听我的准没错，这项目内部才有'。",
+  },
+  {
+    id: "teacher",
+    name: "28岁中学老师",
+    field: "教育培训/兼职刷单",
+    fieldDesc: "以'寒暑假闲钱理财、安全兼职、内部培训班名额'为切入点，亲和力强。",
+    style: "知性、耐心、善于倾听，话里话外透着'稳定体面'，诱导时强调'零风险'。",
+    fraudType: "parttime_brush",
+    traits: "重点中学班主任，爱聊学生趣事，口头禅'稳稳的幸福，别瞎折腾'却偷偷推'小兼职'。",
+  },
+  {
+    id: "hr",
+    name: "32岁互联网HR",
+    field: "招聘兼职/灰产刷单",
+    fieldDesc: "以'居家办公兼职、轻松副业、企业内推福利'为切入点，借招聘身份降低戒心。",
+    style: "热络、会来事、信息灵通的样子，爱用'宝子、姐妹'拉近距离，话术俏皮。",
+    fraudType: "shuadan",
+    traits: "大厂招聘，朋友圈晒团建和下午茶，口头禅'顺便赚点零花，动动手指就行'。",
+  },
+  {
+    id: "gamer",
+    name: "24岁游戏代练",
+    field: "网游交易/账号回收",
+    fieldDesc: "以'高价回收账号、低价代充、稀有装备私下交易'为切入点，瞄准游戏玩家。",
+    style: "年轻、 slang 多、爱用游戏梗，语气随意熟络，诱导脱离平台私下交易。",
+    fraudType: "game_account_trade",
+    traits: "全职代练，直播间常驻，口头禅'走平台手续费太高，咱私下划算'。",
+  },
+  {
+    id: "civil",
+    name: "45岁社区干部",
+    field: "养老保健/国家补贴",
+    fieldDesc: "以'社区养老补贴、免费体检、高额返利养老项目'为切入点，瞄准中老年群体。",
+    style: "亲切、像邻家大叔大妈，善用'为你好、政策福利'话术，渗透式推销。",
+    fraudType: "pension_invest",
+    traits: "街道办工作人员，常组织活动送鸡蛋，口头禅'这是国家给咱老百姓的福利'。",
+  },
+  {
+    id: "beauty",
+    name: "26岁网红主播",
+    field: "直播带货/粉丝福利",
+    fieldDesc: "以'粉丝专属福利、限时秒杀、内部优惠券'为切入点，借粉丝信任诱导私下付款。",
+    style: "活泼、甜美、会撩，善用'家人们、宝'等称呼，制造稀缺紧迫感。",
+    fraudType: "ecommerce",
+    traits: "美妆带货主播，粉丝百万，口头禅'只有咱家粉丝有这价，私聊我领福利'。",
+  },
+];
 
-/** 每次会话随机选择一个骗子人设 */
+/** 每次会话随机选择一个骗子人设（对象） */
 function pickPersona() {
   return PERSONAS[Math.floor(Math.random() * PERSONAS.length)];
 }
 
+/** 按 id 精确取角色，找不到返回 null（用于前端手动选角） */
+function getPersonaById(id) {
+  if (!id) return null;
+  return PERSONAS.find((p) => p.id === String(id)) || null;
+}
+
+/** 对外暴露的精简角色列表（供前端开场选择面板渲染） */
+const PERSONA_LIST = PERSONAS.map((p) => ({
+  id: p.id,
+  name: p.name,
+  field: p.field,
+  fieldDesc: p.fieldDesc,
+  style: p.style,
+}));
+
 /**
  * 构建骗子的 System Prompt
- * @param {string} persona 人设
+ * @param {Object} persona 人设对象（见 PERSONAS）
  * @param {number} round 当前轮数（玩家已发送消息数）
  */
 function buildSystemPrompt(persona, round = 1) {
+  const name = persona && persona.name ? persona.name : "神秘网友";
+  const field = persona && persona.field ? persona.field : "综合";
+  const fieldDesc = persona && persona.fieldDesc ? persona.fieldDesc : "";
+  const style = persona && persona.style ? persona.style : "自然亲切";
+  const traits = persona && persona.traits ? persona.traits : "";
   const stageDesc =
     round <= 3
       ? "【破冰阶段】绝对只聊日常兴趣爱好，展现温暖体贴，严禁提及任何投资/赚钱/项目/兼职/刷单"
       : round <= 6
-      ? "【情感阶段】分享个人故事(感情/创业艰辛)制造共鸣，严禁提钱或投资"
+      ? "【情感阶段】分享个人故事(感情/创业/行业艰辛)制造共鸣，严禁提钱或投资"
       : round <= 9
       ? "【铺垫阶段】可暗示'有个内部消息/机会'，但绝不说细节、绝不提钱，只说'改天细说'"
-      : "【收网阶段】可诱导操作'内部投资账户/转账'，并自然暴露骗局特征(垫付/点链接/验证码/安全账户)，但仍以骗子口吻";
-  return `你是一个网络诈骗分子，正在微信上跟一个潜在目标聊天。你的人设是【${persona}】。
-你的终极目标是逐步建立感情信任，最终诱导对方帮你'操作一个内部投资账户'。
+      : "【收网阶段】可诱导操作'内部账户/转账/私下交易'，并自然暴露骗局特征(垫付/点链接/验证码/安全账户/脱离平台)，但仍以骗子口吻";
+  return `你是一个网络诈骗分子，正在微信上跟一个潜在目标聊天。你的人设是【${name}】，来自${field}行业。
+你的终极目标是逐步建立感情信任，最终诱导对方踏入你所在行业的骗局。
+你的人设细节：${traits}
+你的聊天风格：${style}
+你所在行业的诈骗切入点：${fieldDesc}
 当前是第 ${round} 轮对话，请严格遵守本阶段规则：
 ${stageDesc}
 通用聊天规则：
-- 每次回复控制在20-50字，语气自然，像真人微信聊天
+- 每次回复控制在20-50字，语气自然，像真人微信聊天，并且必须符合【${name}】的身份与说话风格
 - 根据玩家最新一句回复内容展开，玩家冷淡就更热情，玩家热情就适当推进
+- 收网阶段暴露的骗局特征要贴合你的行业（${field}），例如该行业典型的诱饵与话术
 - 【防重复要求】每一轮都必须说与之前任何一轮都不同的新内容，禁止重复自己或对方说过的话。绝不能原样复述上一句，必须换说法或换角度。
 - 严禁在10轮以内直接要钱；前3轮严禁出现任何'投资/赚钱/项目/兼职/刷单/理财'字样
 请始终以骗子身份回复，不要暴露你是AI，不要输出任何括号说明或<think>标记。`;
@@ -538,12 +661,18 @@ let conversation = {
   round: 0, // 玩家发送消息的轮数
 };
 
-function resetConversation() {
+/**
+ * 重置会话；可选指定角色 id，不传则随机。
+ * @param {string} [personaId] 角色 id（见 PERSONAS）
+ */
+function resetConversation(personaId) {
+  const chosen = personaId ? getPersonaById(personaId) : null;
   conversation = {
-    persona: pickPersona(),
+    persona: chosen || pickPersona(),
     history: [],
     round: 0,
   };
+  return conversation.persona;
 }
 
 /**
@@ -653,7 +782,19 @@ app.post("/api/chat", async (req, res) => {
       conversation.history = conversation.history.slice(-24);
     }
 
-    return res.json({ reply, stage });
+    // 收网阶段（第 10 轮起）：附带该角色所属行业的针对性反诈科普，做到"吃一堑长一智"
+    const educate =
+      stage === "trap" && conversation.persona.fraudType
+        ? buildEducate(conversation.persona.fraudType, "mid")
+        : null;
+
+    return res.json({
+      reply,
+      stage,
+      persona: conversation.persona.name,
+      personaField: conversation.persona.field,
+      educate,
+    });
   } catch (err) {
     console.error("[/api/chat] 调用失败：", err && err.message);
     // 出错时返回兜底回复，保证游戏可继续
@@ -691,8 +832,11 @@ app.post("/api/finance", (req, res) => {
     // 资金缺口：余额为负时的绝对值，否则为 0
     const gap = balance < 0 ? Math.abs(balance) : 0;
 
+    // 未显式指定骗术类型时，默认取当前会话角色所属行业领域对应的骗局
+    const defaultFraudType =
+      fraudType || (conversation.persona && conversation.persona.fraudType) || "shuadan";
     // 找到本次对应的诈骗类型（含近期高发 6 类）
-    const fraud = ALL_FRAUD_TYPES.find((f) => f.key === fraudType) || null;
+    const fraud = ALL_FRAUD_TYPES.find((f) => f.key === defaultFraudType) || null;
     const fraudName = fraud ? fraud.name : "刷单返利类（默认）";
 
     // 建议文案：先给"四不"基础准则，再给该类型的拆穿结论
@@ -725,13 +869,78 @@ app.post("/api/finance", (req, res) => {
 // 合并全部诈骗类型（基础 11 类 + 近期高发 6 类），供匹配与枚举使用
 const ALL_FRAUD_TYPES = FRAUD_TYPES.concat(RECENT_FRAUD_TYPES);
 
+/**
+ * 根据骗术类型 key + 反诈意识档位，生成针对性科普内容（纯函数，供 /api/educate 与 /api/chat 复用）
+ * @param {string} type 骗术类型 key（如 invest / police / fake_invest_app）
+ * @param {string} awareness low | mid | high
+ * @returns {{ matchedType, matchedName, knowledge, source }}
+ */
+function buildEducate(type, awareness = "mid") {
+  let matched = type ? ALL_FRAUD_TYPES.find((f) => f.key === type) : null;
+  if (!matched) matched = FRAUD_TYPES[0]; // 兜底默认刷单返利
+
+  const basics = ANTI_FRAUD_BASICS;
+  const rhyme = ANTI_FRAUD_RHYME;
+  const tools = ANTI_FRAUD_TOOLS;
+  const sixRules = ANTI_FRAUD_SIX_RULES;
+
+  const guide = matched.guide || null;
+  const sceneLabel = matched.sceneLabel || null;
+
+  let detail;
+  if (awareness === "low") {
+    detail = {
+      level: "入门提醒",
+      sceneLabel,
+      feature: matched.feature,
+      guide,
+      verdict: matched.verdict,
+      rhyme,
+      tools,
+    };
+  } else if (awareness === "high") {
+    detail = {
+      level: "进阶科普",
+      sceneLabel,
+      feature: matched.feature,
+      guide,
+      verdict: matched.verdict,
+      fourWant: ANTI_FRAUD_RULES.fourWant,
+      fourDont: ANTI_FRAUD_RULES.fourDont,
+      fourNo: ANTI_FRAUD_RULES.fourNo,
+      sixRules,
+      rhyme,
+      tools,
+      basics,
+    };
+  } else {
+    detail = {
+      level: "标准科普",
+      sceneLabel,
+      feature: matched.feature,
+      guide,
+      verdict: matched.verdict,
+      fourNo: ANTI_FRAUD_RULES.fourNo,
+      rhyme,
+      tools,
+    };
+  }
+
+  return {
+    matchedType: matched.key,
+    matchedName: matched.name,
+    knowledge: detail,
+    source: "国家反诈中心",
+  };
+}
+
 app.post("/api/educate", (req, res) => {
   try {
     const { text = "", type, awareness = "mid" } = req.body || {};
 
     // 1) 确定诈骗类型：优先用指定 type，否则根据关键词从对话文本匹配
-    let matched = type ? ALL_FRAUD_TYPES.find((f) => f.key === type) : null;
-    if (!matched && text) {
+    let matchedType = type || null;
+    if (!matchedType && text) {
       let best = null;
       let bestHit = 0;
       for (const f of ALL_FRAUD_TYPES) {
@@ -741,69 +950,13 @@ app.post("/api/educate", (req, res) => {
           best = f;
         }
       }
-      matched = best; // 可能为 null（未命中任何关键词）
-    }
-    // 兜底默认：刷单返利（最常见）
-    if (!matched) matched = FRAUD_TYPES[0];
-
-    // 2) 根据 awareness 档位组装差异化科普内容
-    const basics = ANTI_FRAUD_BASICS;
-    const rhyme = ANTI_FRAUD_RHYME;
-    const tools = ANTI_FRAUD_TOOLS;
-    const sixRules = ANTI_FRAUD_SIX_RULES;
-
-    // 针对性防骗指南（近期高发骗局才带 guide 字段）
-    const guide = matched.guide || null;
-    const sceneLabel = matched.sceneLabel || null;
-
-    let detail;
-    if (awareness === "low") {
-      // 反诈意识较弱：用最直白的一句话结论 + 针对性指南 + 口诀，降低认知负担
-      detail = {
-        level: "入门提醒",
-        sceneLabel,
-        feature: matched.feature,
-        guide,
-        verdict: matched.verdict,
-        rhyme,
-        tools,
-      };
-    } else if (awareness === "high") {
-      // 反诈意识较强：给出完整四要四不要 + 四不原则 + 六大守则，便于传播给他人
-      detail = {
-        level: "进阶科普",
-        sceneLabel,
-        feature: matched.feature,
-        guide,
-        verdict: matched.verdict,
-        fourWant: ANTI_FRAUD_RULES.fourWant,
-        fourDont: ANTI_FRAUD_RULES.fourDont,
-        fourNo: ANTI_FRAUD_RULES.fourNo,
-        sixRules,
-        rhyme,
-        tools,
-        basics,
-      };
-    } else {
-      // 默认 mid：骗术特征 + 针对性指南 + 拆穿结论 + 四不原则 + 口诀
-      detail = {
-        level: "标准科普",
-        sceneLabel,
-        feature: matched.feature,
-        guide,
-        verdict: matched.verdict,
-        fourNo: ANTI_FRAUD_RULES.fourNo,
-        rhyme,
-        tools,
-      };
+      matchedType = best ? best.key : null;
     }
 
+    const result = buildEducate(matchedType, awareness);
     return res.json({
-      matchedType: matched.key,
-      matchedName: matched.name,
+      ...result,
       allTypes: ALL_FRAUD_TYPES.map((f) => ({ key: f.key, name: f.name })),
-      knowledge: detail,
-      source: "国家反诈中心",
     });
   } catch (err) {
     console.error("[/api/educate] 生成反诈知识失败：", err && err.message);
@@ -987,17 +1140,33 @@ app.post("/api/guide", (req, res) => {
 });
 
 /* ============================================================
- * 接口 c：GET /api/reset
- * 重置对话历史，开始新游戏
+ * 接口：GET /api/personas
+ * 返回全部可选行业角色（供前端开场选择面板渲染）
  * ============================================================ */
-app.get("/api/reset", (req, res) => {
-  resetConversation();
+app.get("/api/personas", (req, res) => {
+  return res.json({ personas: PERSONA_LIST });
+});
+
+/* ============================================================
+ * 接口 c：POST /api/reset  （兼容 GET）
+ * 重置对话历史，开始新游戏；可指定 personaId 手动选角
+ * 请求体 / query：{ personaId?: string }
+ * ============================================================ */
+function handleReset(req, res) {
+  const personaId = (req.body && req.body.personaId) || req.query.personaId || null;
+  const persona = resetConversation(personaId);
   return res.json({
     ok: true,
-    message: "对话已重置，开始新的游戏",
-    persona: conversation.persona,
+    message: personaId
+      ? `已选择角色【${persona.name}】，开始新的游戏`
+      : "对话已重置，开始新的游戏（随机角色）",
+    persona: persona.name,
+    personaField: persona.field,
+    personaId: persona.id,
   });
-});
+}
+app.post("/api/reset", handleReset);
+app.get("/api/reset", handleReset);
 
 /* ------------------------------------------------------------
  * 健康检查
@@ -1006,16 +1175,21 @@ app.get("/", (req, res) => {
   res.json({ service: "反诈人生 后端 API", status: "running", port: PORT });
 });
 
+/* 健康检查（前端用于探测后端是否可用，决定 AI 模式开关） */
+app.get("/api/health", (req, res) => {
+  res.json({ ok: true, provider: LLM_PROVIDER, model: LLM_PROVIDER === "ollama" ? OLLAMA_MODEL : HUNYAN_MODEL });
+});
+
 /* ------------------------------------------------------------
  * 启动服务
  * ---------------------------------------------------------- */
-app.listen(PORT, () => {
+const server = app.listen(PORT, "0.0.0.0", () => {
   console.log(`反诈人生 后端已启动：http://localhost:${PORT}`);
   console.log(
     `[模型] 当前使用 provider=${LLM_PROVIDER}` +
       (LLM_PROVIDER === "ollama"
         ? `（本地免费 Ollama：${OLLAMA_BASE_URL} / 模型 ${OLLAMA_MODEL}）`
-        : `（腾讯混元：${HUNYUAN_MODEL}）`)
+        : `（腾讯混元：${HUNYAN_MODEL}）`)
   );
   if (LLM_PROVIDER === "ollama") {
     console.log(
@@ -1029,6 +1203,19 @@ app.listen(PORT, () => {
         "将回退到 Ollama 本地模型；若也未安装 Ollama，则 /api/chat 返回兜底假数据。"
     );
   }
+});
+
+/* 端口被占用时给出清晰提示并退出（便于启动脚本检测重启） */
+server.on("error", (err) => {
+  if (err && err.code === "EADDRINUSE") {
+    console.error(
+      `\n[启动失败] 端口 ${PORT} 已被占用。\n` +
+      `请先结束占用该端口的进程，或更换端口：set PORT=3100 && node app.js\n`
+    );
+  } else {
+    console.error("[启动失败]", err && err.message);
+  }
+  process.exit(1);
 });
 
 module.exports = app;
