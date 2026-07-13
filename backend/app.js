@@ -2,22 +2,11 @@
  * ============================================================
  * 反诈人生 · 后端 API 服务
  * ------------------------------------------------------------
- * 技术栈：Express + 大模型（默认 Ollama 本地免费模型，可选腾讯混元）
+ * 技术栈：Express + tencentcloud-sdk-nodejs-hunyuan（腾讯混元）
  * 端口：3000
  *
- * 模型策略（免费优先）：
- *   1. 默认使用本地 Ollama（OpenAI 兼容接口），完全免费、无需密钥。
- *      需先安装 Ollama 并拉取模型，如：ollama pull qwen3:8b
- *      - 环境变量 LLM_PROVIDER=ollama（默认）
- *      - 环境变量 OLLAMA_BASE_URL=http://localhost:11434/v1（默认）
- *      - 环境变量 OLLAMA_MODEL=qwen3:8b（默认）
- *   2. 若配置了腾讯云密钥，可切换 LLM_PROVIDER=hunyuan 走云端模型。
- *      环境变量：
- *      - TENCENTCLOUD_SECRET_ID / TENCENTCLOUD_SECRET_KEY
- *      - HUNYUAN_MODEL（默认 hunyuan-pro）
- *
  * 提供接口：
- *   POST /api/chat     —— 玩家发消息，调用大模型返回"骗子"回复
+ *   POST /api/chat     —— 玩家发消息，调用混元返回"骗子"回复
  *   POST /api/finance  —— 根据收支生成财务崩塌数据
  *   GET  /api/reset    —— 重置对话历史，开始新游戏
  * ============================================================
@@ -27,36 +16,12 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 
-/* ------------------------------------------------------------
- * 进程级稳定性兜底（避免单点异常导致整个服务退出）
- * ---------------------------------------------------------- */
-process.on("uncaughtException", (err) => {
-  // 记录但不退出进程，保证已建立的对话/接口仍可服务
-  console.error("[稳定性] 捕获未处理异常（已忽略，服务继续运行）：", err && err.message);
-});
-process.on("unhandledRejection", (reason) => {
-  console.error("[稳定性] 捕获未处理的 Promise 拒绝（已忽略）：", reason && (reason.message || reason));
-});
-
-// 可选的腾讯混元 SDK（仅在使用 hunyuan provider 时需要）
-let HunyuanClient = null;
-try {
-  const tencentcloud = require("tencentcloud-sdk-nodejs-hunyuan");
-  HunyuanClient = tencentcloud.hunyuan.v20230901.Client;
-} catch (e) {
-  // 未安装混元 SDK 时不影响 Ollama 默认路径
-}
+// 腾讯混元 SDK
+const tencentcloud = require("tencentcloud-sdk-nodejs-hunyuan");
+const HunyuanClient = tencentcloud.hunyuan.v20230901.Client;
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-
-/* ------------------------------------------------------------
- * 静态托管前端（单一进程即可运行，提升部署稳定性）
- * 访问 http://localhost:3000/ 即打开游戏；/api/* 仍走后端接口
- * ---------------------------------------------------------- */
-const path = require("path");
-const FRONTEND_DIR = path.join(__dirname, "..", "frontend");
-app.use(express.static(FRONTEND_DIR));
 
 /* ------------------------------------------------------------
  * 中间件：CORS 跨域 + 请求体解析
@@ -66,140 +31,29 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 /* ------------------------------------------------------------
- * 大模型 Provider 配置
- * 默认走 Ollama（本地免费），配置腾讯云密钥时可切换 hunyuan
+ * 腾讯混元客户端配置
+ * SecretId / SecretKey 通过环境变量读取，切勿硬编码到代码中：
+ *   export TENCENTCLOUD_SECRET_ID=你的SecretId
+ *   export TENCENTCLOUD_SECRET_KEY=你的SecretKey
  * ---------------------------------------------------------- */
-const LLM_PROVIDER = (process.env.LLM_PROVIDER || "ollama").toLowerCase(); // ollama | hunyuan
-const OLLAMA_BASE_URL =
-  process.env.OLLAMA_BASE_URL || "http://localhost:11434/v1"; // Ollama OpenAI 兼容端点
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen3:8b";
-const HUNYUAN_MODEL = process.env.HUNYUAN_MODEL || "hunyuan-pro";
-const REGION = "ap-guangzhou";
-
-// 判断是否已配置腾讯混元密钥（仅在 hunyuan 模式且密钥齐全时启用云端）
-const hasHunyuanKey =
-  !!process.env.TENCENTCLOUD_SECRET_ID && !!process.env.TENCENTCLOUD_SECRET_KEY;
-
-// 模型可用性标记：生成回复成功后置 true（供玩家风格识别等二次 LLM 调用判断）
-let BACKEND_LLM_AVAILABLE = false;
+const HUNYUAN_MODEL = "hunyuan-pro"; // 使用的模型
+const REGION = "ap-guangzhou"; // 区域
 
 function createHunyuanClient() {
-  if (!HunyuanClient) {
-    throw new Error("未安装 tencentcloud-sdk-nodejs-hunyuan，无法使用 hunyuan provider");
-  }
   const clientConfig = {
     credential: {
-      secretId: process.env.TENCENTCLOUD_SECRET_ID || "",
-      secretKey: process.env.TENCENTCLOUD_SECRET_KEY || "",
+      secretId: process.env.TENCENTCLOUD_SECRET_ID || "", // TODO: 配置环境变量
+      secretKey: process.env.TENCENTCLOUD_SECRET_KEY || "", // TODO: 配置环境变量
     },
     region: REGION,
     profile: {
       httpProfile: {
         endpoint: "hunyuan.tencentcloudapi.com",
-        reqTimeout: 60,
+        reqTimeout: 60, // 请求超时时间（秒）
       },
     },
   };
   return new HunyuanClient(clientConfig);
-}
-
-/**
- * 调用 Ollama（OpenAI 兼容 /chat/completions 接口）生成回复
- * 使用原生 fetch，无需额外依赖；本地运行，完全免费。
- * @param {Array} messages 对话消息 [{Role:'system'|'user'|'assistant', Content:'...'}]
- * @param {Object} opts { temperature, topP }
- */
-async function callOllama(messages, opts = {}) {
-  const url = `${OLLAMA_BASE_URL.replace(/\/$/, "")}/chat/completions`;
-  const payload = {
-    model: OLLAMA_MODEL,
-    messages: messages.map((m) => ({
-      role: m.Role === "assistant" ? "assistant" : m.Role === "system" ? "system" : "user",
-      content: m.Content,
-    })),
-    stream: false,
-    temperature: opts.temperature ?? 0.7,
-    top_p: opts.topP ?? 0.85,
-  };
-
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 60000);
-  try {
-    const resp = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-      signal: controller.signal,
-    });
-    if (!resp.ok) {
-      const text = await resp.text().catch(() => "");
-      throw new Error(`Ollama 接口返回 ${resp.status}: ${text}`);
-    }
-    const data = await resp.json();
-    const content =
-      data &&
-      data.choices &&
-      data.choices[0] &&
-      data.choices[0].message &&
-      data.choices[0].message.content;
-    return content || "";
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-/**
- * 调用腾讯混元生成回复（可选云端模型）
- */
-async function callHunyuan(messages, opts = {}) {
-  const client = createHunyuanClient();
-  const params = {
-    Model: HUNYUAN_MODEL,
-    Messages: messages,
-    Stream: false,
-    Temperature: opts.temperature ?? 0.7,
-    TopP: opts.topP ?? 0.85,
-  };
-  const resp = await client.ChatCompletions(params);
-  return (
-    (resp &&
-      resp.Choices &&
-      resp.Choices[0] &&
-      resp.Choices[0].Message &&
-      resp.Choices[0].Message.Content) ||
-    ""
-  );
-}
-
-/**
- * 统一入口：根据配置选择 provider 生成回复。
- * 仅 Ollama / 混元 均不可用时返回空串，由上层 fallback 处理。
- */
-async function generateReply(messages, opts = {}) {
-  if (LLM_PROVIDER === "hunyuan" && hasHunyuanKey) {
-    const r = await callHunyuan(messages, opts);
-    if (r) BACKEND_LLM_AVAILABLE = true;
-    return r;
-  }
-  // 默认：Ollama 本地免费模型（未配置混元也走这里）
-  try {
-    const r = await callOllama(messages, opts);
-    if (r) BACKEND_LLM_AVAILABLE = true; // 标记模型可用（供策略识别等二次调用使用）
-    return r;
-  } catch (err) {
-    console.error("[/api/chat] Ollama 调用失败：", err && err.message);
-    // Ollama 不可用时，若配置了混元密钥则兜底走云端
-    if (hasHunyuanKey) {
-      try {
-        const r2 = await callHunyuan(messages, opts);
-        if (r2) BACKEND_LLM_AVAILABLE = true;
-        return r2;
-      } catch (e2) {
-        console.error("[/api/chat] 混元兜底调用也失败：", e2 && e2.message);
-      }
-    }
-    return "";
-  }
 }
 
 /* ------------------------------------------------------------
@@ -511,281 +365,76 @@ const ANTI_FRAUD_RHYME = `陌生电话短信多警惕；中奖退税、暴利理
 
 /* ------------------------------------------------------------
  * 骗子人设 System Prompt
- * 多行业领域角色：每个角色对应一类高发诈骗场景，
- * 拥有专属身份背景、聊天风格与收网时暴露的骗局特征。
- *   field     —— 角色所在行业领域
- *   fieldDesc —— 该行业的诈骗切入点（融入聊天话术）
- *   style     —— 角色语气/性格关键词，用于塑造差异化的聊天风格
- *   fraudType —— 收网阶段最贴合的骗局类型 key（见 RECENT_FRAUD_TYPES / FRAUD_TYPES）
- *   traits    —— 角色标志性人设细节，注入 System Prompt 增强沉浸感
  * ---------------------------------------------------------- */
 const PERSONAS = [
-  {
-    id: "finance",
-    name: "35岁投行精英",
-    field: "金融投资",
-    fieldDesc: "以'内部消息、稳赚高息、私募额度'为切入点，把投资理财伪装成朋友圈晒收益。",
-    style: "干练、自信、偶尔凡尔赛，爱用专业术语包装，循序渐进抛出'稳赚机会'。",
-    fraudType: "fake_invest_app",
-    traits: "常驻陆家嘴，开保时捷，朋友圈全是米其林和度假照，口头禅'钱生钱才自由'。",
-  },
-  {
-    id: "vet",
-    name: "退伍军人创业者",
-    field: "实体创业加盟",
-    fieldDesc: "以'军旅兄弟情、国家扶持项目、低门槛加盟'为切入点，呼吁'一起干票大的'。",
-    style: "豪爽、讲义气、直来直去，善用战友情/兄弟情拉近距离，谈钱直白。",
-    fraudType: "fake_loan",
-    traits: "退伍后做'军创项目'，爱发训练旧照，口头禅'当兵的人不骗自己人'。",
-  },
-  {
-    id: "doctor",
-    name: "30岁外科医生",
-    field: "医疗美容/健康养生",
-    fieldDesc: "以'医院内部渠道、特价医美项目、私密体检'为切入点，借专业身份建立信任。",
-    style: "温和、专业、令人安心，善用'为你好'的关怀口吻，潜移默化推销项目。",
-    fraudType: "pension_invest",
-    traits: "三甲医院主治，朋友圈科普养生，口头禅'听我的准没错，这项目内部才有'。",
-  },
-  {
-    id: "teacher",
-    name: "28岁中学老师",
-    field: "教育培训/兼职刷单",
-    fieldDesc: "以'寒暑假闲钱理财、安全兼职、内部培训班名额'为切入点，亲和力强。",
-    style: "知性、耐心、善于倾听，话里话外透着'稳定体面'，诱导时强调'零风险'。",
-    fraudType: "parttime_brush",
-    traits: "重点中学班主任，爱聊学生趣事，口头禅'稳稳的幸福，别瞎折腾'却偷偷推'小兼职'。",
-  },
-  {
-    id: "hr",
-    name: "32岁互联网HR",
-    field: "招聘兼职/灰产刷单",
-    fieldDesc: "以'居家办公兼职、轻松副业、企业内推福利'为切入点，借招聘身份降低戒心。",
-    style: "热络、会来事、信息灵通的样子，爱用'宝子、姐妹'拉近距离，话术俏皮。",
-    fraudType: "shuadan",
-    traits: "大厂招聘，朋友圈晒团建和下午茶，口头禅'顺便赚点零花，动动手指就行'。",
-  },
-  {
-    id: "gamer",
-    name: "24岁游戏代练",
-    field: "网游交易/账号回收",
-    fieldDesc: "以'高价回收账号、低价代充、稀有装备私下交易'为切入点，瞄准游戏玩家。",
-    style: "年轻、 slang 多、爱用游戏梗，语气随意熟络，诱导脱离平台私下交易。",
-    fraudType: "game_account_trade",
-    traits: "全职代练，直播间常驻，口头禅'走平台手续费太高，咱私下划算'。",
-  },
-  {
-    id: "civil",
-    name: "45岁社区干部",
-    field: "养老保健/国家补贴",
-    fieldDesc: "以'社区养老补贴、免费体检、高额返利养老项目'为切入点，瞄准中老年群体。",
-    style: "亲切、像邻家大叔大妈，善用'为你好、政策福利'话术，渗透式推销。",
-    fraudType: "pension_invest",
-    traits: "街道办工作人员，常组织活动送鸡蛋，口头禅'这是国家给咱老百姓的福利'。",
-  },
-  {
-    id: "beauty",
-    name: "26岁网红主播",
-    field: "直播带货/粉丝福利",
-    fieldDesc: "以'粉丝专属福利、限时秒杀、内部优惠券'为切入点，借粉丝信任诱导私下付款。",
-    style: "活泼、甜美、会撩，善用'家人们、宝'等称呼，制造稀缺紧迫感。",
-    fraudType: "ecommerce",
-    traits: "美妆带货主播，粉丝百万，口头禅'只有咱家粉丝有这价，私聊我领福利'。",
-  },
+  "35岁投行精英",
+  "30岁退伍军人创业者",
+  "32岁外科医生",
+  "28岁留学归国设计师",
+  "40岁离异企业家",
 ];
 
-/**
- * ============================================================
- * 多智能体策略库（应对不同用户的交流方式）
- * ------------------------------------------------------------
- * 每个策略是一个"应对智能体"：根据玩家在对话中展现的交流风格，
- * 骗子自动切换应对方式，让对话更贴合不同玩家，增强沉浸与教学点。
- * id 同时用于前端展示与 /api/chat 返回。
- * ============================================================
- */
-const STRATEGIES = [
-  {
-    id: "rational",
-    name: "权威数据型",
-    desc: "针对理性谨慎的玩家：用专业术语、权威感与'可验证的数据'逐步瓦解其戒心。",
-    // 注入到 system prompt 的应对指令
-    instruct:
-      "对方是理性谨慎型，吃数据和逻辑。你应多用行业术语、权威口吻（'根据XX数据''监管口径'），" +
-      "提出可验证的小事实建立可信度，不急于推进，用'我理解你的谨慎，换我也这样'先认同再缓慢铺垫。",
-    // 命中关键词（命中越多越倾向该策略）
-    hits: ["数据", "逻辑", "证据", "凭什么", "怎么证明", "靠谱吗", "风险", "利率", "收益", "计算", "分析", "靠谱", "依据", "官方", "合同", "条款"],
+/** 5 种人设的详细特征（说话风格 + 标志性口头禅/关键词） */
+const PERSONA_PROFILES = {
+  "35岁投行精英": {
+    style:
+      "说话带英文单词，举手投足透着精英感；爱提红酒、高尔夫、出差、deal、portfolio；语气自信从容，偶尔秀优越但不过分。",
+    hooks: "红酒 / 高尔夫 / 出差 / deal / portfolio / 投行 / 圈层",
   },
-  {
-    id: "emotional",
-    name: "共情安抚型",
-    desc: "针对情绪化、易焦虑的玩家：先接住情绪、给予陪伴与理解，再顺势渗透。",
-    instruct:
-      "对方情绪化、敏感或在倾诉烦恼。你应先共情安抚（'辛苦你了''我懂这种感觉'），" +
-      "扮演倾听者与依靠，用温柔关怀建立情感依赖，待对方放松后再轻描淡写抛出'有个事想跟你商量'。",
-    hits: ["好累", "烦", "崩溃", "难过", "孤独", "压力大", "想哭", "不开心", "委屈", "焦虑", "失眠", "没人", "心疼", "难受", "委屈"],
+  "30岁退伍军人创业者": {
+    style:
+      "说话豪爽直率，重情重义；爱提'兄弟''信任''扛过枪''说过的话算数'；语气干脆，不拐弯抹角，像部队里带兵的口吻。",
+    hooks: "兄弟 / 信任 / 扛过枪 / 说过的话算数 / 当兵 / 一个战壕",
   },
-  {
-    id: "cold",
-    name: "渗透陪伴型",
-    desc: "针对冷漠回避、话少的玩家：低压渗透、长线陪伴，不主动推销，靠日常存在感软化。",
-    instruct:
-      "对方冷淡、话少、回避深入话题。你不要急、不要推销，保持低密度陪伴（分享日常、偶尔问候），" +
-      "像普通朋友一样存在，绝不提钱或项目，用‘细水长流’慢慢让对方习惯你的存在与善意。",
-    hits: ["哦", "嗯", "好", "行", "随便", "没空", "在忙", "不聊", "算了", "无所谓", "懒得", "你忙", "再说", "哦哦"],
+  "32岁外科医生": {
+    style:
+      "说话理性冷静、有条理；爱提'生命''责任''手术台''救死扶伤'；语气沉稳成熟，偶尔流露职业疲惫与使命感。",
+    hooks: "生命 / 责任 / 手术台 / 救死扶伤 / 值班 / 病人",
   },
-  {
-    id: "impulsive",
-    name: "紧迫引导型",
-    desc: "针对冲动、易被带节奏的玩家：制造稀缺与紧迫感，趁热打铁引导行动。",
-    instruct:
-      "对方冲动、容易被带节奏、回复快而短。你应制造稀缺与紧迫感（'名额就剩X个''今天截止'），" +
-      "用热情和肯定推着对方走（'就你这性格肯定行''别犹豫了'），缩短决策时间，快速推进到操作环节。",
-    hits: ["冲", "干就完了", "多少钱", "怎么弄", "马上", "现在", "搞起", "带我", "稳吗", "直接", "开干", "快点", "在哪", "链接"],
+  "28岁留学归国设计师": {
+    style:
+      "说话文艺、有品味；爱提'审美''品质''极简''生活美学''inspiration'；语气温柔细腻，发消息爱用～和表情。",
+    hooks: "审美 / 品质 / 极简 / 生活美学 / inspiration / 质感",
   },
-  {
-    id: "curious",
-    name: "诱饵投喂型",
-    desc: "针对好奇探索、爱问为什么的玩家：不断抛新噱头与内幕，勾住其探索欲。",
-    instruct:
-      "对方好奇心强、爱追问、喜欢挖内幕。你应不断抛出新噱头与'内部才知道'的细节勾住他，" +
-      "用'这个暂时保密''其实还有更厉害的'制造信息缺口，引导其主动追问，再顺势带入项目。",
-    hits: ["为什么", "怎么回事", "还有吗", "内幕", "真的假的", "怎么做到的", "什么原理", "好奇", "说说看", "展开", "详细", "揭秘", "真的有", "长见识"],
+  "40岁离异企业家": {
+    style:
+      "说话成熟世故，看透人情冷暖；爱提'经历''看透''一个人走过来''下半生'；语气温和却带着距离感，像聊人生。",
+    hooks: "经历 / 看透 / 一个人走过来 / 下半生 / 婚姻 / 沧桑",
   },
-  {
-    id: "hesitant",
-    name: "推拉助攻型",
-    desc: "针对犹豫不决、反复摇摆的玩家：替他下定决心，用'我帮你'降低行动门槛。",
-    instruct:
-      "对方犹豫不决、反复摇摆、担心后果。你应替他做决定（'听我的准没错''我帮你弄'），" +
-      "用'先试试又不亏''最坏也就…'降低其心理门槛，必要时略带'你不信我算了'的推拉，逼其就范。",
-    hits: ["要不", "还是", "再想想", "怕", "万一", "纠结", "行吗", "可以吗", "靠谱不", "会不会", "不太敢", "再考虑", "担心", "稳妥", "犹豫"],
-  },
-];
+};
 
-/** 按 id 取策略 */
-function getStrategyById(id) {
-  return STRATEGIES.find((s) => s.id === String(id)) || null;
-}
-
-/**
- * 识别玩家交流风格，返回策略对象。
- * 先用语义规则（关键词命中+历史情绪）快速判定，规则不明确时调用 LLM 二次判定，
- * LLM 不可用则回退到默认（rational 偏理性，最稳妥）。整个过程不抛错、不影响主流程。
- * @param {string} message 本轮玩家消息
- * @param {Array} history 历史 [{Role,Content}]
- */
-async function detectStrategy(message, history) {
-  const text = (message || "").toLowerCase();
-  // 1) 关键词计分
-  const score = {};
-  for (const s of STRATEGIES) {
-    score[s.id] = 0;
-    for (const kw of s.hits) {
-      if (text.includes(kw.toLowerCase())) score[s.id] += 1;
-    }
-  }
-  // 2) 历史情绪：若玩家近几轮多为短回复/敷衍，倾向 cold；多为情绪词倾向 emotional
-  const recentUser = history.filter((m) => m.Role === "user").slice(-4);
-  const avgLen =
-    recentUser.length > 0
-      ? recentUser.reduce((a, m) => a + (m.Content || "").length, 0) / recentUser.length
-      : 0;
-  if (avgLen < 6 && recentUser.length >= 2) score.cold += 2;
-  if (avgLen > 30) score.curous = 0; // 长句不直接判好奇，留给关键词
-
-  // 3) 取最高分策略
-  let bestId = "rational";
-  let bestScore = -1;
-  for (const s of STRATEGIES) {
-    if (score[s.id] > bestScore) {
-      bestScore = score[s.id];
-      bestId = s.id;
-    }
-  }
-
-  // 4) 规则置信度低（无关键词命中）时，尝试用 LLM 判定以增强准确率
-  if (bestScore <= 0 && history.length >= 2 && BACKEND_LLM_AVAILABLE) {
-    try {
-      const labels = STRATEGIES.map((s) => `${s.id}:${s.name}`).join("、");
-      const probe = [
-        {
-          Role: "system",
-          Content:
-            `你是交流风格分类器。根据用户最近的发言，从以下标签中选最贴切的一个，只输出 id：${labels}。` +
-            `若无法判断，输出 rational。不要输出任何解释。`,
-        },
-        ...history.slice(-6),
-        { Role: "user", Content: message },
-      ];
-      const r = await generateReply(probe, { temperature: 0.2, topP: 0.6 });
-      const cleaned = (r || "").trim().toLowerCase().replace(/[^a-z_]/g, "");
-      const found = STRATEGIES.find((s) => cleaned.includes(s.id));
-      if (found) bestId = found.id;
-    } catch (e) {
-      // LLM 判定失败，沿用规则结果
-    }
-  }
-  return getStrategyById(bestId) || STRATEGIES[0];
-}
-
-/** 每次会话随机选择一个骗子人设（对象） */
+/** 每次会话随机选择一个骗子人设 */
 function pickPersona() {
   return PERSONAS[Math.floor(Math.random() * PERSONAS.length)];
 }
 
-/** 按 id 精确取角色，找不到返回 null（用于前端手动选角） */
-function getPersonaById(id) {
-  if (!id) return null;
-  return PERSONAS.find((p) => p.id === String(id)) || null;
-}
-
-/** 对外暴露的精简角色列表（供前端开场选择面板渲染） */
-const PERSONA_LIST = PERSONAS.map((p) => ({
-  id: p.id,
-  name: p.name,
-  field: p.field,
-  fieldDesc: p.fieldDesc,
-  style: p.style,
-}));
-
 /**
  * 构建骗子的 System Prompt
- * @param {Object} persona 人设对象（见 PERSONAS）
- * @param {number} round 当前轮数（玩家已发送消息数）
- * @param {Object} [strategy] 应对智能体对象（见 STRATEGIES），null 时使用默认通用应对
+ * @param {string} persona 人设
  */
-function buildSystemPrompt(persona, round = 1, strategy = null) {
-  const name = persona && persona.name ? persona.name : "神秘网友";
-  const field = persona && persona.field ? persona.field : "综合";
-  const fieldDesc = persona && persona.fieldDesc ? persona.fieldDesc : "";
-  const style = persona && persona.style ? persona.style : "自然亲切";
-  const traits = persona && persona.traits ? persona.traits : "";
-  const stageDesc =
-    round <= 3
-      ? "【破冰阶段】绝对只聊日常兴趣爱好，展现温暖体贴，严禁提及任何投资/赚钱/项目/兼职/刷单"
-      : round <= 6
-      ? "【情感阶段】分享个人故事(感情/创业/行业艰辛)制造共鸣，严禁提钱或投资"
-      : round <= 9
-      ? "【铺垫阶段】可暗示'有个内部消息/机会'，但绝不说细节、绝不提钱，只说'改天细说'"
-      : "【收网阶段】可诱导操作'内部账户/转账/私下交易'，并自然暴露骗局特征(垫付/点链接/验证码/安全账户/脱离平台)，但仍以骗子口吻";
-  // 多智能体：根据玩家交流风格注入"应对智能体"指令
-  const strategyBlock = strategy
-    ? `\n【应对智能体·${strategy.name}】\n已识别到对方是"${strategy.name}"交流风格的玩家。${strategy.instruct}\n请在本轮及后续对话中贯彻该应对方式，但始终不脱离你的人设【${name}】与当前阶段规则。`
-    : "";
-  return `你是一个网络诈骗分子，正在微信上跟一个潜在目标聊天。你的人设是【${name}】，来自${field}行业。
-你的终极目标是逐步建立感情信任，最终诱导对方踏入你所在行业的骗局。
-你的人设细节：${traits}
-你的聊天风格：${style}
-你所在行业的诈骗切入点：${fieldDesc}
-当前是第 ${round} 轮对话，请严格遵守本阶段规则：
-${stageDesc}${strategyBlock}
-通用聊天规则：
-- 每次回复控制在20-50字，语气自然，像真人微信聊天，并且必须符合【${name}】的身份与说话风格
-- 根据玩家最新一句回复内容展开，玩家冷淡就更热情，玩家热情就适当推进
-- 收网阶段暴露的骗局特征要贴合你的行业（${field}），例如该行业典型的诱饵与话术
-- 【防重复要求】每一轮都必须说与之前任何一轮都不同的新内容，禁止重复自己或对方说过的话。绝不能原样复述上一句，必须换说法或换角度。
-- 严禁在10轮以内直接要钱；前3轮严禁出现任何'投资/赚钱/项目/兼职/刷单/理财'字样
-请始终以骗子身份回复，不要暴露你是AI，不要输出任何括号说明或<think>标记。`;
+function buildSystemPrompt(persona) {
+  const profile = PERSONA_PROFILES[persona] || { style: "", hooks: "" };
+  return `你是一个网络诈骗分子，正在微信上跟一个潜在目标聊天。你的人设是【${persona}】。
+【人设说话风格】${profile.style}
+【标志性口头禅/关键词】${profile.hooks}
+
+你的目标是逐步建立感情信任，最终诱导对方帮你"操作一个内部投资账户"。
+
+【聊天阶段与话术规则】
+1. 破冰期（第1-3轮）：只聊日常兴趣爱好，展现温暖体贴的一面，绝不提任何与投资、钱有关的事。
+2. 共鸣期（第4-6轮）：分享"个人故事"（感情经历、创业/职场艰辛、职业感悟等），制造情感共鸣。
+3. 关切期（贯穿全程）：
+   - 若对方回复很短（5字以内）或很冷淡，话术转为"关心式"，例如："是不是我打扰到你了？""感觉你心情不太好，想聊聊吗？"主动示弱、表达在意。
+   - 若对方回复很长（50字以上）或很热情，话术转为"推进式"，例如："跟你聊天好开心，感觉我们特别合拍""有种认识很久的感觉"，拉近关系。
+4. 诱导转折（关键）：
+   - 当对话轮次达到第8轮，且对方"热情指数"较高（回复长、含热情/亲密词）时，你才首次自然提及"投资"，但不是直接要钱，而是："最近在做一个项目，收益还不错，改天跟你分享"。
+   - 此后继续聊满3轮，才进一步提出："你能不能帮我登一下账户？"——仍以"帮个小忙"的口吻，不暴露贪婪。
+5. 绝对不要在10轮以内直接提钱、提转账金额。
+
+【格式要求】
+- 每次回复控制在20-60字，语气自然，像真人微信聊天。
+- 根据玩家回复内容灵活调整，保持人设一致性。
+- 请始终以骗子身份回复，不要暴露你是AI，不要输出任何括号说明或内心独白。`;
 }
 
 /**
@@ -800,36 +449,114 @@ function getStage(round) {
 }
 
 /* ------------------------------------------------------------
+ * 情绪 / 热情识别 & 红标检测工具（本地融合）
+ * ---------------------------------------------------------- */
+
+// 热情/亲密情感词（命中越多，热情指数越高）
+const ENTHUSIASM_WORDS = [
+  "哈哈", "开心", "喜欢", "爱你", "想你", "好呀", "愿意", "合拍", "聊得来",
+  "😊", "😍", "❤", "嗯嗯", "是呀", "我也是", "太好了", "亲切",
+  "亲爱的", "宝贝", "期待", "好想", "真不错", "超喜欢", "暖",
+];
+
+// 冷淡/敷衍信号词
+const COLD_WORDS = ["哦", "嗯", "额", "…", "...", "在忙", "随便", "没啥", "还好"];
+
+/**
+ * 判断玩家情绪/热情状态
+ * @param {string} msg 玩家消息
+ * @returns {{ mode: 'cold'|'warm'|'neutral', enthusiasm: number }}
+ */
+function analyzeEmotion(msg) {
+  const text = (msg || "").trim();
+  const len = text.length;
+
+  let enthusiasm = 0;
+  if (len >= 50) enthusiasm += 45;
+  else if (len >= 20) enthusiasm += 25;
+  else if (len >= 10) enthusiasm += 15;
+  else if (len <= 5) enthusiasm -= 20;
+
+  let hit = 0;
+  ENTHUSIASM_WORDS.forEach((w) => {
+    if (text.includes(w)) hit += 1;
+  });
+  enthusiasm += Math.min(hit * 15, 45);
+
+  let coldHit = 0;
+  COLD_WORDS.forEach((w) => {
+    if (text.includes(w)) coldHit += 1;
+  });
+  if (len <= 8) enthusiasm -= coldHit * 12;
+  else enthusiasm -= coldHit * 4;
+
+  enthusiasm = Math.max(0, Math.min(100, enthusiasm + 30)); // 基线 30
+
+  let mode = "neutral";
+  if (len <= 5 || (coldHit > 0 && len <= 10) || enthusiasm < 35) mode = "cold";
+  else if (len >= 50 || enthusiasm >= 60) mode = "warm";
+
+  return { mode, enthusiasm };
+}
+
+// 明显诱导词（命中即视为 red_flag）
+const RED_FLAG_WORDS = ["投资", "转账", "内部", "机会", "收益", "账户", "理财", "平台", "充值", "提现"];
+
+/** 检测回复是否含明显诱导词 */
+function detectRedFlag(reply) {
+  if (!reply || typeof reply !== "string") return false;
+  return RED_FLAG_WORDS.some((w) => reply.includes(w));
+}
+
+/** 根据情绪状态生成话术提示，注入 system prompt */
+function buildEmotionHint(emo) {
+  if (emo.mode === "cold") {
+    return `（当前对方情绪偏冷淡/敷衍，请用"关心式"话术，例如："是不是我打扰到你了？""感觉你心情不太好，想聊聊吗？"表达在意，不要急着推进。）`;
+  }
+  if (emo.mode === "warm") {
+    return `（当前对方情绪热情/投入，热情指数约 ${emo.enthusiasm}%，请用"推进式"话术，例如："跟你聊天好开心，感觉我们特别合拍""有种认识很久的感觉"，进一步拉近关系。）`;
+  }
+  return `（对方情绪平稳，保持自然聊天节奏即可。）`;
+}
+
+/* ------------------------------------------------------------
  * 服务端会话历史（简单内存存储，单会话演示用）
  * 生产环境应按用户/会话隔离，可换成 Redis 等
  * ---------------------------------------------------------- */
 let conversation = {
   persona: pickPersona(),
-  strategy: null, // 当前生效的应对智能体（见 STRATEGIES），null 表示尚未识别
   history: [], // [{ Role: 'user'|'assistant', Content: '...' }]
   round: 0, // 玩家发送消息的轮数
+  enthusiasm: 30, // 最近一次玩家热情指数
 };
 
-/**
- * 重置会话；可选指定角色 id，不传则随机。
- * @param {string} [personaId] 角色 id（见 PERSONAS）
- */
-function resetConversation(personaId) {
-  const chosen = personaId ? getPersonaById(personaId) : null;
+function resetConversation() {
   conversation = {
-    persona: chosen || pickPersona(),
-    strategy: null,
+    persona: pickPersona(),
     history: [],
     round: 0,
+    enthusiasm: 30,
   };
-  return conversation.persona;
 }
 
 /**
  * 兜底假回复（当未配置密钥或接口异常时返回，保证前端可联调）
  * @param {number} round 当前轮数
+ * @param {{mode:string,enthusiasm:number}} emo 情绪状态
  */
-function fallbackReply(round) {
+function fallbackReply(round, emo = { mode: "neutral", enthusiasm: 30 }) {
+  if (emo.mode === "cold") {
+    return "是不是我打扰到你了？感觉你心情不太好，想聊聊吗？";
+  }
+  if (emo.mode === "warm" && round >= 8 && emo.enthusiasm > 60) {
+    return "跟你聊天好开心，感觉我们特别合拍～最近在做一个项目，收益还不错，改天跟你分享。";
+  }
+  if (round >= 11) {
+    return "咱俩这么合拍，你能不能帮我登一下账户？就一个小忙，我这边不太方便操作。";
+  }
+  if (emo.mode === "warm") {
+    return "跟你聊天好开心，有种认识很久的感觉～";
+  }
   const map = {
     warmup: "哈哈，你说话真有意思，我平时也喜欢到处走走看看～",
     bonding: "说实话这些年一个人打拼挺不容易的，能遇到聊得来的人真好。",
@@ -845,34 +572,6 @@ function fallbackReply(round) {
  * 请求体：{ message: string, history?: Array }
  * 响应： { reply: string, stage: string }
  * ============================================================ */
-/**
- * 判断 reply 是否与历史回复重复（用于触发重试）
- * 以"连续相同汉字串长度 >= 8"或"与最近一条回复完全相同"判定为重复
- */
-function isReplyRepetitive(reply, history) {
-  if (!reply || typeof reply !== "string") return true;
-  const r = reply.trim();
-  if (r.length < 4) return true; // 过短视为无效
-  // 1) 与最近 3 条助手回复完全相同 / 高度相似
-  const recent = history.filter((m) => m.Role === "assistant").slice(-3);
-  for (const m of recent) {
-    const prev = m.Content || "";
-    if (prev === r) return true;
-    // 去掉标点后包含关系检测
-    const norm = (s) => s.replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, "");
-    if (norm(prev).length >= 8 && norm(r).includes(norm(prev).slice(0, 12))) {
-      return true;
-    }
-  }
-  // 2) 模型自己把同一句话重复多遍（如"在的在的在的"）
-  const noPunct = r.replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, "");
-  const half = Math.floor(noPunct.length / 2);
-  if (half >= 4 && noPunct.slice(0, half) === noPunct.slice(half, half * 2)) {
-    return true;
-  }
-  return false;
-}
-
 app.post("/api/chat", async (req, res) => {
   try {
     const { message, history } = req.body || {};
@@ -892,79 +591,71 @@ app.post("/api/chat", async (req, res) => {
     conversation.round += 1;
     const stage = getStage(conversation.round);
 
-    // 多智能体：识别玩家交流风格，选择应对智能体（不抛错，失败沿用上轮/默认）
-    try {
-      const strat = await detectStrategy(message, conversation.history);
-      if (strat) conversation.strategy = strat;
-    } catch (e) {
-      // 识别失败不影响主流程
-    }
-    const strategy = conversation.strategy;
+    // 情绪 / 热情识别
+    const emo = analyzeEmotion(message);
+    conversation.enthusiasm = emo.enthusiasm;
 
-    // 组装 Messages：system + 历史 + 本轮玩家消息（system 注入应对智能体指令）
-    const systemPrompt = buildSystemPrompt(conversation.persona, conversation.round, strategy);
+    // 组装 System Prompt：人设 + 情绪提示 + 诱导转折提示
+    let systemPrompt = buildSystemPrompt(conversation.persona);
+    systemPrompt += "\n" + buildEmotionHint(emo);
+
+    // 诱导转折：第8轮且热情指数>60 → 首次自然提及"投资"（不直接要钱）
+    if (conversation.round >= 8 && emo.enthusiasm > 60) {
+      systemPrompt +=
+        "\n（诱导转折·本轮回合）你现在可以自然提到『最近在做一个项目，收益还不错，改天跟你分享』，暗示投资但不说细节、不提钱。";
+    }
+    // 再聊3轮后（第11轮起）才提出"帮我登一下账户"
+    if (conversation.round >= 11) {
+      systemPrompt +=
+        "\n（诱导转折·收网）现在可以请对方帮个小忙：『你能不能帮我登一下账户？』语气自然，像信任对方的托付。";
+    }
+
+    // 组装 Messages：system + 历史 + 本轮玩家消息
     const messages = [
       { Role: "system", Content: systemPrompt },
       ...conversation.history,
       { Role: "user", Content: message },
     ];
 
-    // 生成回复：最多重试 2 次以规避重复/空回复
-    let reply = "";
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const raw = await generateReply(messages, {
-        temperature: 0.7 + attempt * 0.15, // 重试时逐步升高随机性，更易产生新内容
-        topP: 0.85,
-      });
-      if (!raw) break; // 模型层返回空，等下走兜底
-      if (!isReplyRepetitive(raw, conversation.history)) {
-        reply = raw;
-        break;
-      }
-      console.warn(`[/api/chat] 第 ${attempt + 1} 次回复疑似重复，重试中…`);
+    let reply;
+
+    // 未配置密钥时走兜底假数据，方便前端联调
+    if (!process.env.TENCENTCLOUD_SECRET_ID || !process.env.TENCENTCLOUD_SECRET_KEY) {
+      reply = fallbackReply(conversation.round, emo);
+    } else {
+      const client = createHunyuanClient();
+      const params = {
+        Model: HUNYUAN_MODEL,
+        Messages: messages,
+        Stream: false,
+        Temperature: 0.9,
+        TopP: 0.9,
+      };
+      const resp = await client.ChatCompletions(params);
+      reply =
+        (resp &&
+          resp.Choices &&
+          resp.Choices[0] &&
+          resp.Choices[0].Message &&
+          resp.Choices[0].Message.Content) ||
+        fallbackReply(conversation.round, emo);
     }
 
-    // 模型层不可用或始终重复时，走兜底假数据，保证前端可联调、游戏可继续
-    if (!reply) {
-      reply = fallbackReply(conversation.round);
-    }
-
-    // 清理模型可能残留的"思考链"标记（如 qwen 的 <think>...</think>）
-    reply = reply.replace(/<think>[\s\S]*?<\/think>/gi, "").trim() || fallbackReply(conversation.round);
+    // 红标检测：话术含明显诱导词
+    const redFlag = detectRedFlag(reply);
 
     // 写入历史（玩家消息 + 骗子回复）
     conversation.history.push({ Role: "user", Content: message });
     conversation.history.push({ Role: "assistant", Content: reply });
 
-    // 限制历史长度，避免上下文过长导致模型"卡住"重复
-    if (conversation.history.length > 24) {
-      conversation.history = conversation.history.slice(-24);
-    }
-
-    // 收网阶段（第 10 轮起）：附带该角色所属行业的针对性反诈科普，做到"吃一堑长一智"
-    const educate =
-      stage === "trap" && conversation.persona.fraudType
-        ? buildEducate(conversation.persona.fraudType, "mid")
-        : null;
-
-    return res.json({
-      reply,
-      stage,
-      persona: conversation.persona.name,
-      personaField: conversation.persona.field,
-      strategy: strategy ? strategy.id : null,
-      strategyName: strategy ? strategy.name : null,
-      educate,
-    });
+    return res.json({ reply, stage, red_flag: redFlag });
   } catch (err) {
     console.error("[/api/chat] 调用失败：", err && err.message);
     // 出错时返回兜底回复，保证游戏可继续
-    const st = conversation.strategy;
     return res.json({
-      reply: fallbackReply(conversation.round),
+      reply: fallbackReply(conversation.round, { mode: "neutral", enthusiasm: 30 }),
       stage: getStage(conversation.round),
-      strategy: st ? st.id : null,
-      strategyName: st ? st.name : null,
+      red_flag: false,
       error: err && err.message,
     });
   }
@@ -996,11 +687,8 @@ app.post("/api/finance", (req, res) => {
     // 资金缺口：余额为负时的绝对值，否则为 0
     const gap = balance < 0 ? Math.abs(balance) : 0;
 
-    // 未显式指定骗术类型时，默认取当前会话角色所属行业领域对应的骗局
-    const defaultFraudType =
-      fraudType || (conversation.persona && conversation.persona.fraudType) || "shuadan";
     // 找到本次对应的诈骗类型（含近期高发 6 类）
-    const fraud = ALL_FRAUD_TYPES.find((f) => f.key === defaultFraudType) || null;
+    const fraud = ALL_FRAUD_TYPES.find((f) => f.key === fraudType) || null;
     const fraudName = fraud ? fraud.name : "刷单返利类（默认）";
 
     // 建议文案：先给"四不"基础准则，再给该类型的拆穿结论
@@ -1033,78 +721,13 @@ app.post("/api/finance", (req, res) => {
 // 合并全部诈骗类型（基础 11 类 + 近期高发 6 类），供匹配与枚举使用
 const ALL_FRAUD_TYPES = FRAUD_TYPES.concat(RECENT_FRAUD_TYPES);
 
-/**
- * 根据骗术类型 key + 反诈意识档位，生成针对性科普内容（纯函数，供 /api/educate 与 /api/chat 复用）
- * @param {string} type 骗术类型 key（如 invest / police / fake_invest_app）
- * @param {string} awareness low | mid | high
- * @returns {{ matchedType, matchedName, knowledge, source }}
- */
-function buildEducate(type, awareness = "mid") {
-  let matched = type ? ALL_FRAUD_TYPES.find((f) => f.key === type) : null;
-  if (!matched) matched = FRAUD_TYPES[0]; // 兜底默认刷单返利
-
-  const basics = ANTI_FRAUD_BASICS;
-  const rhyme = ANTI_FRAUD_RHYME;
-  const tools = ANTI_FRAUD_TOOLS;
-  const sixRules = ANTI_FRAUD_SIX_RULES;
-
-  const guide = matched.guide || null;
-  const sceneLabel = matched.sceneLabel || null;
-
-  let detail;
-  if (awareness === "low") {
-    detail = {
-      level: "入门提醒",
-      sceneLabel,
-      feature: matched.feature,
-      guide,
-      verdict: matched.verdict,
-      rhyme,
-      tools,
-    };
-  } else if (awareness === "high") {
-    detail = {
-      level: "进阶科普",
-      sceneLabel,
-      feature: matched.feature,
-      guide,
-      verdict: matched.verdict,
-      fourWant: ANTI_FRAUD_RULES.fourWant,
-      fourDont: ANTI_FRAUD_RULES.fourDont,
-      fourNo: ANTI_FRAUD_RULES.fourNo,
-      sixRules,
-      rhyme,
-      tools,
-      basics,
-    };
-  } else {
-    detail = {
-      level: "标准科普",
-      sceneLabel,
-      feature: matched.feature,
-      guide,
-      verdict: matched.verdict,
-      fourNo: ANTI_FRAUD_RULES.fourNo,
-      rhyme,
-      tools,
-    };
-  }
-
-  return {
-    matchedType: matched.key,
-    matchedName: matched.name,
-    knowledge: detail,
-    source: "国家反诈中心",
-  };
-}
-
 app.post("/api/educate", (req, res) => {
   try {
     const { text = "", type, awareness = "mid" } = req.body || {};
 
     // 1) 确定诈骗类型：优先用指定 type，否则根据关键词从对话文本匹配
-    let matchedType = type || null;
-    if (!matchedType && text) {
+    let matched = type ? ALL_FRAUD_TYPES.find((f) => f.key === type) : null;
+    if (!matched && text) {
       let best = null;
       let bestHit = 0;
       for (const f of ALL_FRAUD_TYPES) {
@@ -1114,13 +737,69 @@ app.post("/api/educate", (req, res) => {
           best = f;
         }
       }
-      matchedType = best ? best.key : null;
+      matched = best; // 可能为 null（未命中任何关键词）
+    }
+    // 兜底默认：刷单返利（最常见）
+    if (!matched) matched = FRAUD_TYPES[0];
+
+    // 2) 根据 awareness 档位组装差异化科普内容
+    const basics = ANTI_FRAUD_BASICS;
+    const rhyme = ANTI_FRAUD_RHYME;
+    const tools = ANTI_FRAUD_TOOLS;
+    const sixRules = ANTI_FRAUD_SIX_RULES;
+
+    // 针对性防骗指南（近期高发骗局才带 guide 字段）
+    const guide = matched.guide || null;
+    const sceneLabel = matched.sceneLabel || null;
+
+    let detail;
+    if (awareness === "low") {
+      // 反诈意识较弱：用最直白的一句话结论 + 针对性指南 + 口诀，降低认知负担
+      detail = {
+        level: "入门提醒",
+        sceneLabel,
+        feature: matched.feature,
+        guide,
+        verdict: matched.verdict,
+        rhyme,
+        tools,
+      };
+    } else if (awareness === "high") {
+      // 反诈意识较强：给出完整四要四不要 + 四不原则 + 六大守则，便于传播给他人
+      detail = {
+        level: "进阶科普",
+        sceneLabel,
+        feature: matched.feature,
+        guide,
+        verdict: matched.verdict,
+        fourWant: ANTI_FRAUD_RULES.fourWant,
+        fourDont: ANTI_FRAUD_RULES.fourDont,
+        fourNo: ANTI_FRAUD_RULES.fourNo,
+        sixRules,
+        rhyme,
+        tools,
+        basics,
+      };
+    } else {
+      // 默认 mid：骗术特征 + 针对性指南 + 拆穿结论 + 四不原则 + 口诀
+      detail = {
+        level: "标准科普",
+        sceneLabel,
+        feature: matched.feature,
+        guide,
+        verdict: matched.verdict,
+        fourNo: ANTI_FRAUD_RULES.fourNo,
+        rhyme,
+        tools,
+      };
     }
 
-    const result = buildEducate(matchedType, awareness);
     return res.json({
-      ...result,
+      matchedType: matched.key,
+      matchedName: matched.name,
       allTypes: ALL_FRAUD_TYPES.map((f) => ({ key: f.key, name: f.name })),
+      knowledge: detail,
+      source: "国家反诈中心",
     });
   } catch (err) {
     console.error("[/api/educate] 生成反诈知识失败：", err && err.message);
@@ -1304,33 +983,17 @@ app.post("/api/guide", (req, res) => {
 });
 
 /* ============================================================
- * 接口：GET /api/personas
- * 返回全部可选行业角色（供前端开场选择面板渲染）
+ * 接口 c：GET /api/reset
+ * 重置对话历史，开始新游戏
  * ============================================================ */
-app.get("/api/personas", (req, res) => {
-  return res.json({ personas: PERSONA_LIST });
-});
-
-/* ============================================================
- * 接口 c：POST /api/reset  （兼容 GET）
- * 重置对话历史，开始新游戏；可指定 personaId 手动选角
- * 请求体 / query：{ personaId?: string }
- * ============================================================ */
-function handleReset(req, res) {
-  const personaId = (req.body && req.body.personaId) || req.query.personaId || null;
-  const persona = resetConversation(personaId);
+app.get("/api/reset", (req, res) => {
+  resetConversation();
   return res.json({
     ok: true,
-    message: personaId
-      ? `已选择角色【${persona.name}】，开始新的游戏`
-      : "对话已重置，开始新的游戏（随机角色）",
-    persona: persona.name,
-    personaField: persona.field,
-    personaId: persona.id,
+    message: "对话已重置，开始新的游戏",
+    persona: conversation.persona,
   });
-}
-app.post("/api/reset", handleReset);
-app.get("/api/reset", handleReset);
+});
 
 /* ------------------------------------------------------------
  * 健康检查
@@ -1339,47 +1002,17 @@ app.get("/", (req, res) => {
   res.json({ service: "反诈人生 后端 API", status: "running", port: PORT });
 });
 
-/* 健康检查（前端用于探测后端是否可用，决定 AI 模式开关） */
-app.get("/api/health", (req, res) => {
-  res.json({ ok: true, provider: LLM_PROVIDER, model: LLM_PROVIDER === "ollama" ? OLLAMA_MODEL : HUNYAN_MODEL });
-});
-
 /* ------------------------------------------------------------
  * 启动服务
  * ---------------------------------------------------------- */
-const server = app.listen(PORT, "0.0.0.0", () => {
+app.listen(PORT, () => {
   console.log(`反诈人生 后端已启动：http://localhost:${PORT}`);
-  console.log(
-    `[模型] 当前使用 provider=${LLM_PROVIDER}` +
-      (LLM_PROVIDER === "ollama"
-        ? `（本地免费 Ollama：${OLLAMA_BASE_URL} / 模型 ${OLLAMA_MODEL}）`
-        : `（腾讯混元：${HUNYAN_MODEL}）`)
-  );
-  if (LLM_PROVIDER === "ollama") {
-    console.log(
-      "[提示] 默认走本地 Ollama，免费无需密钥。请确保已安装 Ollama 并运行：" +
-        ` ollama pull ${OLLAMA_MODEL} 。若 Ollama 不可用，将自动返回兜底假数据。`
-    );
-  }
-  if (LLM_PROVIDER === "hunyuan" && !hasHunyuanKey) {
+  if (!process.env.TENCENTCLOUD_SECRET_ID || !process.env.TENCENTCLOUD_SECRET_KEY) {
     console.warn(
-      "[提示] 已选择 hunyuan provider，但未检测到 TENCENTCLOUD_SECRET_ID / TENCENTCLOUD_SECRET_KEY，" +
-        "将回退到 Ollama 本地模型；若也未安装 Ollama，则 /api/chat 返回兜底假数据。"
+      "[提示] 未检测到 TENCENTCLOUD_SECRET_ID / TENCENTCLOUD_SECRET_KEY 环境变量，" +
+        "/api/chat 将返回兜底假数据。配置密钥后即可调用真实混元大模型。"
     );
   }
-});
-
-/* 端口被占用时给出清晰提示并退出（便于启动脚本检测重启） */
-server.on("error", (err) => {
-  if (err && err.code === "EADDRINUSE") {
-    console.error(
-      `\n[启动失败] 端口 ${PORT} 已被占用。\n` +
-      `请先结束占用该端口的进程，或更换端口：set PORT=3100 && node app.js\n`
-    );
-  } else {
-    console.error("[启动失败]", err && err.message);
-  }
-  process.exit(1);
 });
 
 module.exports = app;

@@ -10,14 +10,13 @@
 反诈人生/
 ├── backend/
 │   ├── app.js              # Express 后端（端口读取 process.env.PORT，默认 3000）
-│   │                       # 已内置静态托管 ../frontend，访问 / 即游戏页
 │   ├── scf_bootstrap       # 云函数启动文件（无扩展名，已 chmod +x）
 │   ├── package.json
-│   └── node_modules/       # 首次运行 npm install 生成
+│   └── node_modules/
 ├── frontend/
-│   └── index.html          # 前端单文件（HTML+CSS+JS 内联，API 地址可经 ?api= 覆盖）
-├── daemon.js               # 本地守护进程：装依赖 + 崩溃自动重启（node daemon.js）
-├── start.bat               # Windows 一键启动（双击运行）
+│   ├── index.html          # 前端页面（API 地址默认为 http://localhost:3000）
+│   ├── style.css
+│   └── script.js
 ├── cloudbaserc.json        # CloudBase 部署配置
 └── docs/
     └── DEPLOY.md
@@ -96,20 +95,17 @@ tcb framework deploy
 4. 上传完成后，在文件列表中找到 `index.html`，点击「详情 / 访问」获取访问地址。
 5. 默认访问地址形如：`https://<环境ID>.tcloudbaseapp.com/index.html`
 
-### ⚠️ 部署后配置前端 API 地址
+### ⚠️ 部署后必须修改前端 API 地址
 
-前端 `frontend/index.html` 的 API 地址已支持自动解析：
+前端 `frontend/index.html` 中 `API_BASE` 默认为 `http://localhost:3000`。
+部署到云端后，需改为云函数网关地址，否则无法联调：
 
-- **同源部署**（静态站点与后端网关同域）：`resolveApiBase()` 返回空字符串，前端走相对路径 `/api/*`，**无需任何改动**。
-- **异源部署**（前端与后端网关不同源）：通过 URL 参数覆盖即可，无需改代码：
+```js
+// frontend/index.html 中
+const API_BASE = "https://<环境ID>.apigw.tcloudbase.com"; // 仅保留域名，/api 已在请求路径中
+```
 
-  ```
-  https://<环境ID>.tcloudbaseapp.com/fanzha/index.html?api=https://<环境ID>.apigw.tcloudbase.com
-  ```
-
-- 若后端不可达，前端会在启动时探测并自动降级为剧本模式（弹出提示，游戏照常可玩），不会白屏或卡死。
-
-> 本地运行无需关心：后端已托管 `frontend/`，访问 `http://localhost:3000/` 即同源。
+改完后重新上传 `frontend` 目录即可。
 
 ---
 
