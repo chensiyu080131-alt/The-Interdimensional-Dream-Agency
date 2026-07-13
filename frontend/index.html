@@ -659,13 +659,13 @@ const btnBack = $("btn-back");
 const phone = $("phone");
 
 /* ---------- 持久化 ---------- */
-const save = () => { try { localStorage.setItem("yzj_state", JSON.stringify(State)); } catch(e){} };
-const loadBadges = () => { try { return JSON.parse(localStorage.getItem("yzj_badges")) || []; } catch(e){ return []; } };
-const loadCodex = () => { try { return JSON.parse(localStorage.getItem("yzj_codex")) || []; } catch(e){ return []; } };
-const loadExp = () => { try { return parseInt(localStorage.getItem("yzj_exp")) || 0; } catch(e){ return 0; } };
-const commitBadges = () => { try { localStorage.setItem("yzj_badges", JSON.stringify(State.badges)); } catch(e){} };
-const commitCodex = () => { try { localStorage.setItem("yzj_codex", JSON.stringify(State.codex)); } catch(e){} };
-const commitExp = () => { try { localStorage.setItem("yzj_exp", String(State.exp)); } catch(e){} };
+function save() { try { localStorage.setItem("yzj_state", JSON.stringify(State)); } catch(e){} }
+function loadBadges() { try { return JSON.parse(localStorage.getItem("yzj_badges")) || []; } catch(e){ return []; } }
+function loadCodex() { try { return JSON.parse(localStorage.getItem("yzj_codex")) || []; } catch(e){ return []; } }
+function loadExp() { try { return parseInt(localStorage.getItem("yzj_exp")) || 0; } catch(e){ return 0; } }
+function commitBadges() { try { localStorage.setItem("yzj_badges", JSON.stringify(State.badges)); } catch(e){} }
+function commitCodex() { try { localStorage.setItem("yzj_codex", JSON.stringify(State.codex)); } catch(e){} }
+function commitExp() { try { localStorage.setItem("yzj_exp", String(State.exp)); } catch(e){} }
 const showOverlay = (id) => $(id).classList.add("show");
 const hideOverlay = (id) => $(id).classList.remove("show");
 
