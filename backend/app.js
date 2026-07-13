@@ -80,6 +80,9 @@ const REGION = "ap-guangzhou";
 const hasHunyuanKey =
   !!process.env.TENCENTCLOUD_SECRET_ID && !!process.env.TENCENTCLOUD_SECRET_KEY;
 
+// 模型可用性标记：生成回复成功后置 true（供玩家风格识别等二次 LLM 调用判断）
+let BACKEND_LLM_AVAILABLE = false;
+
 function createHunyuanClient() {
   if (!HunyuanClient) {
     throw new Error("未安装 tencentcloud-sdk-nodejs-hunyuan，无法使用 hunyuan provider");
@@ -174,17 +177,23 @@ async function callHunyuan(messages, opts = {}) {
  */
 async function generateReply(messages, opts = {}) {
   if (LLM_PROVIDER === "hunyuan" && hasHunyuanKey) {
-    return callHunyuan(messages, opts);
+    const r = await callHunyuan(messages, opts);
+    if (r) BACKEND_LLM_AVAILABLE = true;
+    return r;
   }
   // 默认：Ollama 本地免费模型（未配置混元也走这里）
   try {
-    return await callOllama(messages, opts);
+    const r = await callOllama(messages, opts);
+    if (r) BACKEND_LLM_AVAILABLE = true; // 标记模型可用（供策略识别等二次调用使用）
+    return r;
   } catch (err) {
     console.error("[/api/chat] Ollama 调用失败：", err && err.message);
     // Ollama 不可用时，若配置了混元密钥则兜底走云端
     if (hasHunyuanKey) {
       try {
-        return await callHunyuan(messages, opts);
+        const r2 = await callHunyuan(messages, opts);
+        if (r2) BACKEND_LLM_AVAILABLE = true;
+        return r2;
       } catch (e2) {
         console.error("[/api/chat] 混元兜底调用也失败：", e2 && e2.message);
       }
@@ -585,6 +594,140 @@ const PERSONAS = [
   },
 ];
 
+/**
+ * ============================================================
+ * 多智能体策略库（应对不同用户的交流方式）
+ * ------------------------------------------------------------
+ * 每个策略是一个"应对智能体"：根据玩家在对话中展现的交流风格，
+ * 骗子自动切换应对方式，让对话更贴合不同玩家，增强沉浸与教学点。
+ * id 同时用于前端展示与 /api/chat 返回。
+ * ============================================================
+ */
+const STRATEGIES = [
+  {
+    id: "rational",
+    name: "权威数据型",
+    desc: "针对理性谨慎的玩家：用专业术语、权威感与'可验证的数据'逐步瓦解其戒心。",
+    // 注入到 system prompt 的应对指令
+    instruct:
+      "对方是理性谨慎型，吃数据和逻辑。你应多用行业术语、权威口吻（'根据XX数据''监管口径'），" +
+      "提出可验证的小事实建立可信度，不急于推进，用'我理解你的谨慎，换我也这样'先认同再缓慢铺垫。",
+    // 命中关键词（命中越多越倾向该策略）
+    hits: ["数据", "逻辑", "证据", "凭什么", "怎么证明", "靠谱吗", "风险", "利率", "收益", "计算", "分析", "靠谱", "依据", "官方", "合同", "条款"],
+  },
+  {
+    id: "emotional",
+    name: "共情安抚型",
+    desc: "针对情绪化、易焦虑的玩家：先接住情绪、给予陪伴与理解，再顺势渗透。",
+    instruct:
+      "对方情绪化、敏感或在倾诉烦恼。你应先共情安抚（'辛苦你了''我懂这种感觉'），" +
+      "扮演倾听者与依靠，用温柔关怀建立情感依赖，待对方放松后再轻描淡写抛出'有个事想跟你商量'。",
+    hits: ["好累", "烦", "崩溃", "难过", "孤独", "压力大", "想哭", "不开心", "委屈", "焦虑", "失眠", "没人", "心疼", "难受", "委屈"],
+  },
+  {
+    id: "cold",
+    name: "渗透陪伴型",
+    desc: "针对冷漠回避、话少的玩家：低压渗透、长线陪伴，不主动推销，靠日常存在感软化。",
+    instruct:
+      "对方冷淡、话少、回避深入话题。你不要急、不要推销，保持低密度陪伴（分享日常、偶尔问候），" +
+      "像普通朋友一样存在，绝不提钱或项目，用‘细水长流’慢慢让对方习惯你的存在与善意。",
+    hits: ["哦", "嗯", "好", "行", "随便", "没空", "在忙", "不聊", "算了", "无所谓", "懒得", "你忙", "再说", "哦哦"],
+  },
+  {
+    id: "impulsive",
+    name: "紧迫引导型",
+    desc: "针对冲动、易被带节奏的玩家：制造稀缺与紧迫感，趁热打铁引导行动。",
+    instruct:
+      "对方冲动、容易被带节奏、回复快而短。你应制造稀缺与紧迫感（'名额就剩X个''今天截止'），" +
+      "用热情和肯定推着对方走（'就你这性格肯定行''别犹豫了'），缩短决策时间，快速推进到操作环节。",
+    hits: ["冲", "干就完了", "多少钱", "怎么弄", "马上", "现在", "搞起", "带我", "稳吗", "直接", "开干", "快点", "在哪", "链接"],
+  },
+  {
+    id: "curious",
+    name: "诱饵投喂型",
+    desc: "针对好奇探索、爱问为什么的玩家：不断抛新噱头与内幕，勾住其探索欲。",
+    instruct:
+      "对方好奇心强、爱追问、喜欢挖内幕。你应不断抛出新噱头与'内部才知道'的细节勾住他，" +
+      "用'这个暂时保密''其实还有更厉害的'制造信息缺口，引导其主动追问，再顺势带入项目。",
+    hits: ["为什么", "怎么回事", "还有吗", "内幕", "真的假的", "怎么做到的", "什么原理", "好奇", "说说看", "展开", "详细", "揭秘", "真的有", "长见识"],
+  },
+  {
+    id: "hesitant",
+    name: "推拉助攻型",
+    desc: "针对犹豫不决、反复摇摆的玩家：替他下定决心，用'我帮你'降低行动门槛。",
+    instruct:
+      "对方犹豫不决、反复摇摆、担心后果。你应替他做决定（'听我的准没错''我帮你弄'），" +
+      "用'先试试又不亏''最坏也就…'降低其心理门槛，必要时略带'你不信我算了'的推拉，逼其就范。",
+    hits: ["要不", "还是", "再想想", "怕", "万一", "纠结", "行吗", "可以吗", "靠谱不", "会不会", "不太敢", "再考虑", "担心", "稳妥", "犹豫"],
+  },
+];
+
+/** 按 id 取策略 */
+function getStrategyById(id) {
+  return STRATEGIES.find((s) => s.id === String(id)) || null;
+}
+
+/**
+ * 识别玩家交流风格，返回策略对象。
+ * 先用语义规则（关键词命中+历史情绪）快速判定，规则不明确时调用 LLM 二次判定，
+ * LLM 不可用则回退到默认（rational 偏理性，最稳妥）。整个过程不抛错、不影响主流程。
+ * @param {string} message 本轮玩家消息
+ * @param {Array} history 历史 [{Role,Content}]
+ */
+async function detectStrategy(message, history) {
+  const text = (message || "").toLowerCase();
+  // 1) 关键词计分
+  const score = {};
+  for (const s of STRATEGIES) {
+    score[s.id] = 0;
+    for (const kw of s.hits) {
+      if (text.includes(kw.toLowerCase())) score[s.id] += 1;
+    }
+  }
+  // 2) 历史情绪：若玩家近几轮多为短回复/敷衍，倾向 cold；多为情绪词倾向 emotional
+  const recentUser = history.filter((m) => m.Role === "user").slice(-4);
+  const avgLen =
+    recentUser.length > 0
+      ? recentUser.reduce((a, m) => a + (m.Content || "").length, 0) / recentUser.length
+      : 0;
+  if (avgLen < 6 && recentUser.length >= 2) score.cold += 2;
+  if (avgLen > 30) score.curous = 0; // 长句不直接判好奇，留给关键词
+
+  // 3) 取最高分策略
+  let bestId = "rational";
+  let bestScore = -1;
+  for (const s of STRATEGIES) {
+    if (score[s.id] > bestScore) {
+      bestScore = score[s.id];
+      bestId = s.id;
+    }
+  }
+
+  // 4) 规则置信度低（无关键词命中）时，尝试用 LLM 判定以增强准确率
+  if (bestScore <= 0 && history.length >= 2 && BACKEND_LLM_AVAILABLE) {
+    try {
+      const labels = STRATEGIES.map((s) => `${s.id}:${s.name}`).join("、");
+      const probe = [
+        {
+          Role: "system",
+          Content:
+            `你是交流风格分类器。根据用户最近的发言，从以下标签中选最贴切的一个，只输出 id：${labels}。` +
+            `若无法判断，输出 rational。不要输出任何解释。`,
+        },
+        ...history.slice(-6),
+        { Role: "user", Content: message },
+      ];
+      const r = await generateReply(probe, { temperature: 0.2, topP: 0.6 });
+      const cleaned = (r || "").trim().toLowerCase().replace(/[^a-z_]/g, "");
+      const found = STRATEGIES.find((s) => cleaned.includes(s.id));
+      if (found) bestId = found.id;
+    } catch (e) {
+      // LLM 判定失败，沿用规则结果
+    }
+  }
+  return getStrategyById(bestId) || STRATEGIES[0];
+}
+
 /** 每次会话随机选择一个骗子人设（对象） */
 function pickPersona() {
   return PERSONAS[Math.floor(Math.random() * PERSONAS.length)];
@@ -609,8 +752,9 @@ const PERSONA_LIST = PERSONAS.map((p) => ({
  * 构建骗子的 System Prompt
  * @param {Object} persona 人设对象（见 PERSONAS）
  * @param {number} round 当前轮数（玩家已发送消息数）
+ * @param {Object} [strategy] 应对智能体对象（见 STRATEGIES），null 时使用默认通用应对
  */
-function buildSystemPrompt(persona, round = 1) {
+function buildSystemPrompt(persona, round = 1, strategy = null) {
   const name = persona && persona.name ? persona.name : "神秘网友";
   const field = persona && persona.field ? persona.field : "综合";
   const fieldDesc = persona && persona.fieldDesc ? persona.fieldDesc : "";
@@ -624,13 +768,17 @@ function buildSystemPrompt(persona, round = 1) {
       : round <= 9
       ? "【铺垫阶段】可暗示'有个内部消息/机会'，但绝不说细节、绝不提钱，只说'改天细说'"
       : "【收网阶段】可诱导操作'内部账户/转账/私下交易'，并自然暴露骗局特征(垫付/点链接/验证码/安全账户/脱离平台)，但仍以骗子口吻";
+  // 多智能体：根据玩家交流风格注入"应对智能体"指令
+  const strategyBlock = strategy
+    ? `\n【应对智能体·${strategy.name}】\n已识别到对方是"${strategy.name}"交流风格的玩家。${strategy.instruct}\n请在本轮及后续对话中贯彻该应对方式，但始终不脱离你的人设【${name}】与当前阶段规则。`
+    : "";
   return `你是一个网络诈骗分子，正在微信上跟一个潜在目标聊天。你的人设是【${name}】，来自${field}行业。
 你的终极目标是逐步建立感情信任，最终诱导对方踏入你所在行业的骗局。
 你的人设细节：${traits}
 你的聊天风格：${style}
 你所在行业的诈骗切入点：${fieldDesc}
 当前是第 ${round} 轮对话，请严格遵守本阶段规则：
-${stageDesc}
+${stageDesc}${strategyBlock}
 通用聊天规则：
 - 每次回复控制在20-50字，语气自然，像真人微信聊天，并且必须符合【${name}】的身份与说话风格
 - 根据玩家最新一句回复内容展开，玩家冷淡就更热情，玩家热情就适当推进
@@ -657,6 +805,7 @@ function getStage(round) {
  * ---------------------------------------------------------- */
 let conversation = {
   persona: pickPersona(),
+  strategy: null, // 当前生效的应对智能体（见 STRATEGIES），null 表示尚未识别
   history: [], // [{ Role: 'user'|'assistant', Content: '...' }]
   round: 0, // 玩家发送消息的轮数
 };
@@ -669,6 +818,7 @@ function resetConversation(personaId) {
   const chosen = personaId ? getPersonaById(personaId) : null;
   conversation = {
     persona: chosen || pickPersona(),
+    strategy: null,
     history: [],
     round: 0,
   };
@@ -742,8 +892,17 @@ app.post("/api/chat", async (req, res) => {
     conversation.round += 1;
     const stage = getStage(conversation.round);
 
-    // 组装 Messages：system + 历史 + 本轮玩家消息
-    const systemPrompt = buildSystemPrompt(conversation.persona, conversation.round);
+    // 多智能体：识别玩家交流风格，选择应对智能体（不抛错，失败沿用上轮/默认）
+    try {
+      const strat = await detectStrategy(message, conversation.history);
+      if (strat) conversation.strategy = strat;
+    } catch (e) {
+      // 识别失败不影响主流程
+    }
+    const strategy = conversation.strategy;
+
+    // 组装 Messages：system + 历史 + 本轮玩家消息（system 注入应对智能体指令）
+    const systemPrompt = buildSystemPrompt(conversation.persona, conversation.round, strategy);
     const messages = [
       { Role: "system", Content: systemPrompt },
       ...conversation.history,
@@ -793,14 +952,19 @@ app.post("/api/chat", async (req, res) => {
       stage,
       persona: conversation.persona.name,
       personaField: conversation.persona.field,
+      strategy: strategy ? strategy.id : null,
+      strategyName: strategy ? strategy.name : null,
       educate,
     });
   } catch (err) {
     console.error("[/api/chat] 调用失败：", err && err.message);
     // 出错时返回兜底回复，保证游戏可继续
+    const st = conversation.strategy;
     return res.json({
       reply: fallbackReply(conversation.round),
       stage: getStage(conversation.round),
+      strategy: st ? st.id : null,
+      strategyName: st ? st.name : null,
       error: err && err.message,
     });
   }

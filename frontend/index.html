@@ -67,6 +67,8 @@
     .stage-intro { text-align: center; margin-bottom: 20px; }
     .stage-intro h1 { font-size: 24px; color: #1a1a1a; margin-bottom: 8px; }
     .stage-intro p { font-size: 14px; color: #666; line-height: 1.6; }
+    .intro-tip { font-size: 12px; color: #555; background: #f1ebfe; border: 1px solid #d9c7fb; border-radius: 10px; padding: 10px 12px; margin-top: 14px; line-height: 1.6; text-align: left; }
+    .intro-tip strong { color: #8a5cf6; }
     .role-card {
       background: #fff; border-radius: 14px; padding: 16px; margin-bottom: 14px;
       border: 2px solid transparent; cursor: pointer; transition: all .2s;
@@ -100,6 +102,10 @@
     .hud-val.guard { color: #07c160; }
     .hud-val.wallet { color: #c87f00; }
     .hud-level { text-align: center; font-size: 12px; color: #576b95; margin-top: 2px; font-weight: 600; }
+    /* 应对智能体徽标 */
+    .hud-strategy-row { margin-bottom: 6px; }
+    .hud-strategy { flex: 1; font-size: 12px; font-weight: 700; color: #8a5cf6; background: #f1ebfe; border: 1px solid #d9c7fb; border-radius: 8px; padding: 2px 8px; text-align: center; transition: background .3s; }
+    .hud-strategy.active { background: #efe6ff; }
 
     /* ===== 第一幕聊天 ===== */
     .expose-meter { display: none; } /* 被双血条替代，保留兼容 */
@@ -240,6 +246,7 @@
       <div class="stage-intro">
         <h1>异次元梦想局</h1>
         <p>用别人的身份，替自己踩一遍坑。<br/>选择一个角色，开始这场危险的"相遇"。</p>
+        <div class="intro-tip">🤖 本局内置 6 个「应对智能体」，会根据<strong>你的交流方式</strong>（理性 / 情绪化 / 冷漠 / 冲动 / 好奇 / 犹豫）自动切换骗子的应对策略——你越是某种风格，骗子越会针对性攻心。</div>
       </div>
       <div id="role-list"></div>
     </section>
@@ -256,6 +263,10 @@
           <span class="hud-label">💰 钱包值</span>
           <div class="hud-track"><div class="hud-fill wallet" id="wallet-fill"></div></div>
           <span class="hud-val wallet" id="wallet-val">100</span>
+        </div>
+        <div class="hud-row hud-strategy-row" id="hud-strategy-row">
+          <span class="hud-label">🤖 应对智能体</span>
+          <span class="hud-strategy" id="hud-strategy">识别中…</span>
         </div>
         <div class="hud-level" id="hud-level">段位：韭菜 · 经验 0</div>
       </div>
@@ -637,6 +648,7 @@ const State = {
   codex: loadCodex(),
   exp: loadExp(),
   aiMode: false,     // 是否启用后端AI自由对话
+  strategyName: null, // 当前局识别到的玩家风格/应对智能体名称
   timer: null,
 };
 
@@ -741,10 +753,14 @@ function startRole(key) {
   State.lossAmount = 0;
   State.endingType = null;
   State.aiMode = false;
+  State.strategyName = null;
   save();
   $("stage-roles").classList.add("hidden");
   $("stage-chat").classList.remove("hidden");
   $("chat-area").innerHTML = "";
+  // 重置应对智能体徽标
+  const se = $("hud-strategy");
+  if (se) { se.textContent = "识别中…"; se.classList.remove("active"); }
   navTitle.textContent = r.name + " · 新的朋友";
   btnBack.classList.remove("hidden");
   updateHud();
@@ -837,6 +853,12 @@ async function callAi(userText) {
     const data = await resp.json();
     const reply = (data.reply || "").trim();
     if (typingNode) typingNode.remove();
+    // 多智能体：更新"应对智能体"徽标与 State（用于报告页展示）
+    if (data.strategyName) {
+      State.strategyName = data.strategyName;
+      const el = $("hud-strategy");
+      if (el) { el.textContent = data.strategyName; el.classList.add("active"); }
+    }
     if (reply) {
       appendMsg("ai", reply, "AI真人对话");
       // AI 自由对话后，按当前轮"默认下一步"继续剧本（保持可玩性）
@@ -1123,6 +1145,7 @@ function showReport() {
     <div class="report-row"><span class="k">剩余钱包值</span><span class="v">${State.wallet}</span></div>
     <div class="report-row"><span class="k">结局</span><span class="v">${routeName(State.endingType)}</span></div>
     <div class="report-row"><span class="k">损失</span><span class="v">${State.route === "scam" ? "¥" + State.lossAmount.toLocaleString() : "¥0"}</span></div>
+    <div class="report-row"><span class="k">应对智能体</span><span class="v">${State.strategyName || "（本局未触发 AI 对话）"}</span></div>
     <div class="report-row"><span class="k">累计经验</span><span class="v">${State.exp}</span></div>`;
   // 成就墙
   $("badge-wall").innerHTML = BADGES.map(b => {
