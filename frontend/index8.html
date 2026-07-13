@@ -16,11 +16,10 @@
     body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
       background:#05070f;display:flex;justify-content:center;align-items:stretch;overscroll-behavior:none;color:var(--tx);}
     .phone{position:relative;width:100%;max-width:430px;height:100vh;height:100dvh;
-      background:linear-gradient(160deg,var(--bg1),var(--bg2));display:flex;flex-direction:column;overflow:hidden;box-shadow:0 0 40px rgba(0,0,0,.5);}
+      background:linear-gradient(160deg,var(--bg1),var(--bg2));display:flex;flex-direction:column;overflow:hidden;box-shadow:0 0 40px rgba(0,0,0,.5);transition:background .6s;}
     .hidden{display:none !important;}
 
-    /* ---------- 通用弹层 ---------- */
-    .overlay{position:absolute;inset:0;z-index:60;background:rgba(5,7,15,.72);backdrop-filter:blur(4px);
+    .overlay{position:absolute;inset:0;z-index:60;background:rgba(5,7,15,.78);backdrop-filter:blur(5px);
       display:none;align-items:center;justify-content:center;padding:16px;overflow-y:auto;}
     .overlay.show{display:flex;}
     .sheet{background:linear-gradient(160deg,#141a35,#10121f);border:1px solid var(--line);border-radius:20px;
@@ -32,7 +31,7 @@
     .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--tx2);}
     .btn.gray{background:#2a3150;color:#cdd3e0;}
 
-    /* ---------- 开场警示 ---------- */
+    /* 警示 */
     .warn-screen{position:absolute;inset:0;z-index:90;background:var(--bg1);display:flex;flex-direction:column;justify-content:center;padding:30px 26px;overflow-y:auto;}
     .warn-inner{max-width:380px;margin:0 auto;}
     .warn-screen .kicker{color:var(--hl);font-size:13px;letter-spacing:2px;text-align:center;margin-bottom:8px;}
@@ -45,7 +44,18 @@
     .agree{background:#07C160;color:#fff;border:none;border-radius:14px;padding:15px;font-size:16px;font-weight:800;cursor:pointer;width:100%;}
     .disagree{background:none;color:#8a93a8;border:1px solid #2a3150;border-radius:14px;padding:11px;font-size:13px;margin-top:10px;cursor:pointer;width:100%;}
 
-    /* ---------- 身份卡 ---------- */
+    /* 身份选择 */
+    .idselect-sheet{max-width:400px;}
+    .idopt{display:flex;gap:12px;align-items:center;padding:12px;border-radius:14px;cursor:pointer;margin-bottom:10px;background:rgba(255,255,255,.04);border:1px solid var(--line);transition:background .15s;}
+    .idopt:active{background:rgba(255,255,255,.1);}
+    .idopt.locked{opacity:.5;cursor:not-allowed;filter:grayscale(.6);}
+    .idopt-av{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:20px;flex:0 0 auto;}
+    .idopt-mid{flex:1;min-width:0;}
+    .idopt-name{font-size:15px;font-weight:700;}
+    .idopt-ms{font-size:12px;color:var(--tx2);margin-top:2px;line-height:1.4;}
+    .idopt-lock{font-size:11px;color:var(--gold);margin-top:3px;}
+
+    /* 身份卡 */
     .idcard{text-align:center;}
     .idcard .frame{border:1px solid var(--line);border-radius:16px;padding:18px 16px;background:rgba(255,255,255,.03);}
     .idcard .top{font-size:12px;letter-spacing:3px;color:var(--tx2);margin-bottom:12px;}
@@ -63,42 +73,52 @@
     .id-brief .bnum{width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,.12);font-size:11px;display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
     .id-oath{margin-top:14px;font-style:italic;color:var(--gold);font-size:14px;text-align:center;}
 
-    /* ---------- 顶部状态栏 ---------- */
-    .topbar{flex:0 0 auto;padding:12px 14px 10px;border-bottom:1px solid var(--line);background:rgba(0,0,0,.2);}
+    /* 顶部状态栏 */
+    .topbar{flex:0 0 auto;padding:10px 14px 8px;border-bottom:1px solid var(--line);background:rgba(0,0,0,.25);}
     .top-line1{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--tx2);}
     .top-line1 .cn{color:var(--hl);font-weight:800;font-size:15px;}
-    .top-task{font-size:13px;color:var(--gold);margin-top:6px;font-weight:600;}
-    .susp-wrap{display:flex;align-items:center;gap:8px;margin-top:8px;}
+    .act-badge{font-size:10px;font-weight:800;letter-spacing:1px;}
+    .top-task{font-size:13px;color:var(--gold);margin-top:4px;font-weight:600;}
+    .rel-wrap{display:flex;align-items:center;gap:6px;margin-top:5px;font-size:11px;color:var(--tx2);}
+    .rel-bar{letter-spacing:1px;color:#ffb38a;}
+    .susp-wrap{display:flex;align-items:center;gap:8px;margin-top:6px;}
     .susp-wrap .lab{font-size:11px;color:var(--tx2);white-space:nowrap;}
     .susp-track{flex:1;height:5px;background:rgba(255,255,255,.12);border-radius:3px;overflow:hidden;}
     .susp-fill{height:100%;width:0;background:linear-gradient(90deg,#07C160,#FFD700,#FF8C42,#DC143C);transition:width .4s;}
     .susp-state{font-size:11px;font-weight:700;white-space:nowrap;}
+    .xiaoya-wrap{display:flex;align-items:center;gap:8px;margin-top:6px;}
+    .xiaoya-wrap .lab{font-size:11px;color:#F0A020;white-space:nowrap;}
+    .xiaoya-track{flex:1;height:5px;background:rgba(255,255,255,.12);border-radius:3px;overflow:hidden;}
+    .xiaoya-fill{height:100%;width:0;background:linear-gradient(90deg,#F0A020,#FFD700);transition:width .4s;}
+    .xiaoya-label{font-size:11px;font-weight:700;color:#F0A020;white-space:nowrap;}
     .exit-btn{background:none;border:1px solid rgba(255,255,255,.2);color:#ff9b9b;border-radius:12px;padding:3px 10px;font-size:12px;cursor:pointer;}
 
-    /* ---------- 场景条 ---------- */
-    .scene-bar{flex:0 0 auto;padding:9px 14px;font-size:12px;color:var(--tx2);font-style:italic;background:rgba(255,107,53,.06);border-bottom:1px solid var(--line);}
+    /* 场景条 */
+    .scene-bar{flex:0 0 auto;padding:8px 14px;font-size:12px;color:var(--tx2);font-style:italic;transition:background .4s;}
 
-    /* ---------- 对话头 ---------- */
+    /* 对话头 */
     .chat-head{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line);background:rgba(0,0,0,.15);}
     .chat-av{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;flex:0 0 auto;}
     .chat-head .ct{font-size:15px;font-weight:700;}
     .chat-head .cs{font-size:11px;color:var(--tx2);}
 
-    /* ---------- 对话区 ---------- */
+    /* 对话区 */
     .chat-area{flex:1;overflow-y:auto;padding:14px 12px;}
     .msg{max-width:80%;margin-bottom:12px;display:flex;flex-direction:column;}
     .msg.ai{align-self:flex-start;}.msg.me{align-self:flex-end;align-items:flex-end;}
-    .bubble{padding:11px 14px;border-radius:14px;font-size:15px;line-height:1.55;word-break:break-word;backdrop-filter:blur(20px);}
+    .msg.sys{align-self:center;max-width:92%;}
+    .bubble{padding:11px 14px;border-radius:14px;font-size:15px;line-height:1.55;word-break:break-word;backdrop-filter:blur(20px);white-space:pre-line;}
     .msg.ai .bubble{background:rgba(255,255,255,.1);color:#fff;border-top-left-radius:3px;}
     .msg.me .bubble{background:var(--hl);color:#fff;border-top-right-radius:3px;}
     .msg .tag{font-size:10px;color:var(--tx2);margin-top:4px;}
+    .collapse-screen{background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.15);color:#dfe4ef;font-size:14px;line-height:1.7;border-radius:12px;padding:14px;text-align:center;}
     .typing{display:flex;gap:4px;padding:12px 14px;background:rgba(255,255,255,.1);border-radius:14px;width:fit-content;}
     .typing span{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.6);animation:blink 1s infinite;}
     .typing span:nth-child(2){animation-delay:.2s;}.typing span:nth-child(3){animation-delay:.4s;}
     @keyframes blink{0%,100%{opacity:.3}50%{opacity:1}}
 
-    /* ---------- 选项区 ---------- */
-    .options-bar{flex:0 0 auto;padding:10px 12px;display:flex;flex-direction:column;gap:8px;max-height:44%;overflow-y:auto;border-top:1px solid var(--line);background:rgba(0,0,0,.2);}
+    /* 选项区 */
+    .options-bar{flex:0 0 auto;padding:10px 12px;display:flex;flex-direction:column;gap:8px;max-height:46%;overflow-y:auto;border-top:1px solid var(--line);background:rgba(0,0,0,.25);}
     .opt-btn{background:rgba(255,255,255,.07);border:1px solid var(--line);border-radius:14px;padding:12px 13px;font-size:14px;color:#fff;text-align:left;cursor:pointer;transition:all .15s;}
     .opt-btn:active{background:rgba(255,107,53,.18);border-color:var(--hl);}
     .opt-btn .otype{font-size:10px;padding:2px 7px;border-radius:8px;margin-right:8px;font-weight:700;}
@@ -112,13 +132,13 @@
     .free-send{background:var(--hl);color:#fff;border:none;border-radius:14px;padding:0 18px;font-size:14px;font-weight:700;cursor:pointer;}
     .wait-tip{font-size:13px;color:var(--tx2);text-align:center;padding:8px;}
 
-    /* ---------- 底部功能栏 ---------- */
+    /* 底部栏 */
     .navbar{flex:0 0 auto;display:flex;border-top:1px solid var(--line);background:rgba(0,0,0,.3);}
     .nav-item{flex:1;background:none;border:none;color:var(--tx2);padding:9px 0 calc(9px + env(safe-area-inset-bottom));cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;}
     .nav-item .ic{font-size:19px;}
     .nav-item:active{color:var(--hl);}
 
-    /* ---------- 对话列表 ---------- */
+    /* 对话列表 */
     .conv-row{display:flex;align-items:center;gap:12px;padding:12px;border-radius:14px;cursor:pointer;transition:background .15s;position:relative;}
     .conv-row:active,.conv-row.active{background:rgba(255,255,255,.08);}
     .conv-av{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;flex:0 0 auto;}
@@ -128,7 +148,7 @@
     .conv-last{font-size:12px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;}
     .conv-dot{width:9px;height:9px;border-radius:50%;background:var(--warn);flex:0 0 auto;}
 
-    /* ---------- 任务 ---------- */
+    /* 任务 */
     .task-progress{text-align:center;font-size:12px;color:var(--gold);margin-bottom:12px;}
     .task-card{border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:10px;background:rgba(255,255,255,.03);}
     .task-card.active{border-color:var(--gold);background:rgba(255,215,0,.06);}
@@ -137,7 +157,7 @@
     .task-h{font-size:14px;font-weight:600;}
     .task-dep{font-size:11px;color:var(--tx2);margin-top:4px;}
 
-    /* ---------- 状态/档案 ---------- */
+    /* 状态/档案 */
     .st-row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px dashed rgba(255,255,255,.1);font-size:14px;color:#cdd3e0;}
     .st-tip{font-size:12px;color:var(--tx2);margin-top:12px;line-height:1.6;background:rgba(255,255,255,.04);border-radius:10px;padding:10px;}
     .pf-hd{display:flex;gap:12px;align-items:center;margin-bottom:12px;}
@@ -148,36 +168,59 @@
     .pf-sec b{color:var(--gold);margin-right:8px;}
     .pf-oath{margin-top:12px;font-style:italic;color:var(--gold);text-align:center;font-size:14px;}
 
-    /* ---------- 结局 ---------- */
-    .ending-badge{display:inline-block;font-size:12px;font-weight:800;color:#fff;padding:4px 14px;border-radius:20px;}
-    .ending-hd{text-align:center;margin-bottom:12px;}
-    .ending-title{font-size:20px;font-weight:800;margin:10px 0 4px;}
-    .ending-score{text-align:center;font-size:42px;font-weight:900;margin:8px 0;}
-    .ending-stats{display:flex;gap:8px;margin:10px 0 16px;}
-    .ending-stats .es{flex:1;text-align:center;background:rgba(255,255,255,.05);border-radius:12px;padding:10px 4px;font-size:11px;color:var(--tx2);}
-    .ending-stats .es span{display:block;font-size:19px;font-weight:800;color:#fff;margin-bottom:2px;}
-    .ending-text{font-size:14px;line-height:1.8;color:#dfe4ef;background:rgba(255,255,255,.04);border-radius:12px;padding:14px;}
-    .ending-review{font-size:13px;line-height:1.7;color:#ffcf9e;background:rgba(255,107,53,.1);border:1px solid rgba(255,107,53,.3);border-radius:12px;padding:12px;margin-top:12px;}
-    .ending-review b{display:block;color:var(--hl);margin-bottom:4px;}
+    /* 第三幕·废墟 */
+    .ruins-list{display:flex;flex-direction:column;gap:10px;margin:8px 0 14px;}
+    .ruin-btn{display:flex;align-items:center;gap:12px;padding:14px;border-radius:14px;cursor:pointer;background:rgba(255,255,255,.05);border:1px solid var(--line);text-align:left;color:var(--tx);transition:all .15s;}
+    .ruin-btn:active{background:rgba(255,215,0,.12);}
+    .ruin-btn.done{border-color:var(--gold);background:rgba(255,215,0,.08);}
+    .ruin-ic{font-size:24px;}
+    .ruin-txt{flex:1;display:flex;flex-direction:column;gap:2px;}
+    .ruin-txt b{font-size:15px;}
+    .ruin-txt span{font-size:12px;color:var(--tx2);}
+    .ruin-done{color:var(--gold);font-size:18px;}
 
-    /* ---------- 时间线 ---------- */
-    .tl-item{position:relative;padding:0 0 18px 22px;border-left:2px solid var(--hl);}
+    /* 第四幕·回放 */
+    .replay-end{background:rgba(255,255,255,.04);border-radius:12px;padding:14px;margin-bottom:12px;}
+    .replay-end .rt{font-size:18px;font-weight:800;text-align:center;margin-bottom:6px;}
+    .replay-end .rx{font-size:14px;line-height:1.8;color:#dfe4ef;}
+    .replay-end .rr{font-size:13px;line-height:1.7;color:#ffcf9e;margin-top:10px;background:rgba(255,107,53,.1);border:1px solid rgba(255,107,53,.3);border-radius:10px;padding:10px;}
+    .replay-end .rr b{color:var(--hl);}
+    .tl-item{position:relative;padding:0 0 16px 22px;border-left:2px solid var(--hl);}
     .tl-item:last-child{border-left-color:transparent;}
     .tl-dot{position:absolute;left:-7px;top:2px;width:12px;height:12px;border-radius:50%;background:var(--hl);}
     .tl-day{font-size:12px;color:var(--hl);font-weight:700;}
     .tl-phase{font-size:11px;color:var(--gold);font-weight:600;}
-    .tl-text{font-size:14px;color:#dfe4ef;line-height:1.6;margin-top:3px;}
+    .tl-text{font-size:13px;color:#dfe4ef;line-height:1.6;margin-top:3px;white-space:pre-line;}
 
-    /* ---------- 工具箱 ---------- */
+    /* 平行宇宙 */
+    .pl-item{background:rgba(255,255,255,.05);border-radius:12px;padding:12px;margin-bottom:10px;}
+    .pl-q{font-size:13px;font-weight:700;color:#a9b8dc;margin-bottom:6px;}
+    .pl-a{font-size:13px;line-height:1.7;color:#dfe4ef;}
+    .free-row.fixed{margin-top:8px;}
+
+    /* 第五幕·盾牌 */
+    .shield-hd{text-align:center;margin-bottom:10px;}
+    .shield-title{font-size:20px;font-weight:800;}
+    .shield-sub{font-size:12px;color:var(--tx2);margin-top:3px;}
+    .shield-score{text-align:center;font-size:44px;font-weight:900;margin:6px 0;}
+    .shield-stars{text-align:center;font-size:18px;color:var(--gold);margin-bottom:10px;}
+    .shield-stats{display:flex;gap:8px;margin:10px 0 12px;}
+    .shield-stats .es{flex:1;text-align:center;background:rgba(255,255,255,.05);border-radius:12px;padding:10px 4px;font-size:11px;color:var(--tx2);}
+    .shield-stats .es span{display:block;font-size:19px;font-weight:800;color:#fff;margin-bottom:2px;}
+    .shield-weak{font-size:13px;line-height:1.7;color:#dfe4ef;background:rgba(30,144,255,.12);border:1px solid rgba(30,144,255,.3);border-radius:12px;padding:12px;margin-bottom:10px;}
+    .shield-tips{margin-top:6px;}
+    .shield-tip{font-size:13px;color:#cdd3e0;padding:6px 0;border-bottom:1px dashed rgba(255,255,255,.1);}
+
+    /* 工具箱 */
     .tool-item{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.08);}
     .tool-ic{width:38px;height:38px;border-radius:10px;background:rgba(7,193,96,.15);color:#7fe0ab;display:flex;align-items:center;justify-content:center;font-size:18px;flex:0 0 auto;}
     .tool-txt h4{font-size:14px;margin-bottom:2px;}.tool-txt p{font-size:12px;color:var(--tx2);line-height:1.5;}
     .kw-cloud{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0;}
     .kw{font-size:11px;background:rgba(7,193,96,.15);color:#7fe0ab;border-radius:8px;padding:4px 8px;}
 
-    /* ---------- Toast & 抖动 ---------- */
-    #toast{position:absolute;left:50%;top:64px;transform:translateX(-50%) translateY(-16px);z-index:95;
-      background:rgba(0,0,0,.82);color:#fff;font-size:13px;padding:9px 16px;border-radius:20px;opacity:0;pointer-events:none;transition:all .3s;white-space:nowrap;}
+    /* Toast & 抖动 */
+    #toast{position:absolute;left:50%;top:60px;transform:translateX(-50%) translateY(-16px);z-index:95;
+      background:rgba(0,0,0,.82);color:#fff;font-size:13px;padding:9px 16px;border-radius:20px;opacity:0;pointer-events:none;transition:all .3s;white-space:nowrap;max-width:90%;}
     #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
     @keyframes shake{0%,100%{transform:translate(0,0)}20%{transform:translate(-6px,3px)}40%{transform:translate(5px,-4px)}60%{transform:translate(-4px,2px)}80%{transform:translate(3px,-3px)}}
     .phone.shake{animation:shake .5s;}
@@ -191,13 +234,19 @@
       <div class="topbar">
         <div class="top-line1">
           <div><span class="cn" id="top-codename">猎鹰</span> · <span id="top-day">第 1 天</span></div>
-          <button class="exit-btn hidden" id="btn-exit">退出</button>
+          <div style="text-align:right"><span class="act-badge" id="act-badge">第 1 幕 · 希望</span><br/><span class="act-sub" id="act-sub" style="font-size:10px;color:var(--tx2)"></span><br/><button class="exit-btn hidden" id="btn-exit" style="margin-top:3px">退出</button></div>
         </div>
         <div class="top-task" id="top-task">🎯 —</div>
+        <div class="rel-wrap"><span>关系</span><span class="rel-bar" id="rel-bar">░░░░</span></div>
         <div class="susp-wrap">
           <span class="lab">骗子怀疑度</span>
           <div class="susp-track"><div class="susp-fill" id="susp-fill"></div></div>
           <span class="susp-state" id="susp-label">安全</span>
+        </div>
+        <div class="xiaoya-wrap hidden" id="xiaoya-wrap">
+          <span class="lab">🆘 小雅</span>
+          <div class="xiaoya-track"><div class="xiaoya-fill" id="xiaoya-fill"></div></div>
+          <span class="xiaoya-label" id="xiaoya-label">救援中</span>
         </div>
       </div>
 
@@ -227,7 +276,7 @@
         <div class="kicker">异 次 元 梦 想 局</div>
         <h1>你的任务，<br/>比骗局更危险</h1>
         <p class="sub">一款任务驱动的反诈沉浸式模拟器</p>
-        <p>你将被随机分配一个身份——卧底、记者、志愿者、普通网友……并领到一个<b>必须与骗子接触</b>的任务。挑战不是“识破”，而是<b>“在完成任务的同时不被骗”</b>。</p>
+        <p>你将以一个<b>必须与骗子接触</b>的身份登场——卧底、记者、志愿者、普通网友……挑战不是“识破”，而是<b>“在完成任务的同时不被骗”</b>。完整五幕：希望 → 崩塌 → 废墟 → 回放 → 盾牌。</p>
         <div class="warn-box">
           <p>· 本游戏包含诈骗场景模拟，所有人物、情节均为虚构演示。</p>
           <p>· 全程不会要求你输入任何真实个人信息。</p>
@@ -239,6 +288,14 @@
         <button class="disagree" id="warn-disagree">暂不开始</button>
       </div>
     </div>
+
+    <!-- 身份选择（含解锁） -->
+    <div class="overlay" id="idselect-overlay"><div class="sheet idselect-sheet">
+      <h2>🎭 选择你的身份</h2>
+      <p style="font-size:12px;color:var(--tx2);text-align:center;margin-bottom:12px">完成指定线可解锁新身份（进度自动保存）</p>
+      <div id="idselect-list"></div>
+      <button class="btn gray" id="idselect-close">返回</button>
+    </div></div>
 
     <!-- 身份卡 -->
     <div class="overlay" id="identity-overlay"><div class="sheet idcard">
@@ -261,7 +318,7 @@
         <div class="id-oath" id="idcard-oath"></div>
       </div>
       <button class="btn" id="idcard-start">接受任务，进入</button>
-      <button class="btn ghost" id="idcard-reroll">换一个身份（体验用）</button>
+      <button class="btn ghost" id="idcard-reroll">换一个身份</button>
     </div></div>
 
     <!-- 对话列表 -->
@@ -293,26 +350,56 @@
       <button class="btn gray" id="profile-close">关闭</button>
     </div></div>
 
-    <!-- 结局 -->
-    <div class="overlay" id="ending-overlay"><div class="sheet">
-      <div class="ending-hd">
-        <span class="ending-badge" id="ending-badge">任务完成</span>
-        <div class="ending-title" id="ending-title"></div>
-      </div>
-      <div class="ending-score" id="ending-score">— 分</div>
-      <div class="ending-stats" id="ending-stats"></div>
-      <div class="ending-text" id="ending-text"></div>
-      <div class="ending-review" id="ending-review"></div>
-      <button class="btn" id="ending-timeline" style="background:#2C7BE5;">🕐 查看任务回放</button>
-      <button class="btn" id="ending-toolbox" style="background:#07C160;">🛡 打开防骗工具箱</button>
-      <button class="btn gray" id="ending-restart">领取新身份，再来一局</button>
+    <!-- 第三幕·废墟 -->
+    <div class="overlay" id="ruins-overlay"><div class="sheet">
+      <h2>🏚 第三幕 · 废墟</h2>
+      <p style="font-size:13px;color:var(--tx2);text-align:center;margin-bottom:6px">事情已经发生了。现在，你能做这四件事——</p>
+      <div class="ruins-list" id="ruins-list"></div>
+      <button class="btn" id="ruins-continue" style="background:#DC143C">我做完该做的了，看看发生了什么 →</button>
+      <button class="btn gray" id="ruins-close">稍后</button>
     </div></div>
 
-    <!-- 时间线 -->
-    <div class="overlay" id="timeline-overlay"><div class="sheet">
-      <h2>🕐 任务回放</h2>
-      <div id="timeline-list"></div>
-      <button class="btn gray" id="timeline-close">返回</button>
+    <!-- 第四幕·回放 -->
+    <div class="overlay" id="replay-overlay"><div class="sheet">
+      <h2>🕐 第四幕 · 回放</h2>
+      <div class="replay-end">
+        <div class="rt" id="replay-end-title"></div>
+        <div class="rx" id="replay-end-text"></div>
+        <div class="rr" id="replay-end-review"></div>
+      </div>
+      <h2 style="font-size:15px">📜 你的故事时间线</h2>
+      <div id="timeline-list" style="margin:8px 0 12px"></div>
+      <button class="btn" id="parallel-btn" style="background:#8E44AD">🌀 平行宇宙：如果当时你这样说……</button>
+      <button class="btn" id="replay-continue" style="background:#1E90FF">进入第五幕 · 盾牌 →</button>
+      <button class="btn gray" id="replay-close">返回</button>
+    </div></div>
+
+    <!-- 平行宇宙 -->
+    <div class="overlay" id="parallel-overlay"><div class="sheet">
+      <h2>🌀 平行宇宙</h2>
+      <div id="parallel-list"></div>
+      <div class="free-row fixed">
+        <input class="free-input" id="parallel-input" placeholder="如果当时你这样回复……"/>
+        <button class="free-send" id="parallel-send">生成</button>
+      </div>
+      <div id="parallel-result" style="margin-top:10px"></div>
+      <button class="btn gray" id="parallel-close" style="margin-top:12px">收起</button>
+    </div></div>
+
+    <!-- 第五幕·盾牌 -->
+    <div class="overlay" id="shield-overlay"><div class="sheet">
+      <h2>🛡 第五幕 · 盾牌</h2>
+      <div class="shield-hd">
+        <div class="shield-title" id="shield-title"></div>
+        <div class="shield-sub" id="shield-sub"></div>
+      </div>
+      <div class="shield-score" id="shield-score">— 分</div>
+      <div class="shield-stars" id="shield-stars"></div>
+      <div class="shield-stats" id="shield-stats"></div>
+      <div class="shield-weak" id="shield-weak"></div>
+      <div class="shield-tips" id="shield-tips"></div>
+      <button class="btn" id="shield-toolbox-btn" style="background:#07C160;margin-top:12px">🛡 打开防骗工具箱</button>
+      <button class="btn gray" id="shield-restart">换个身份，再来一局</button>
     </div></div>
 
     <!-- 工具箱 -->
@@ -326,7 +413,7 @@
 
   </div>
 
-  <script src="data7.js"></script>
-  <script src="app7.js"></script>
+  <script src="data8.js"></script>
+  <script src="app8.js"></script>
 </body>
 </html>
