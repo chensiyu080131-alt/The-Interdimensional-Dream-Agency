@@ -1,16 +1,16 @@
 {
   "name": "fanzha-rensheng-backend",
-  "version": "1.0.0",
-  "description": "反诈人生 后端API服务",
-  "main": "app.js",
+  "version": "3.0.0",
+  "description": "异次元梦想局 后端API服务（混元大模型 OpenAI 兼容接口）",
+  "main": "src/app.js",
   "scripts": {
-    "start": "node app.js",
-    "dev": "node app.js"
+    "start": "node src/app.js",
+    "dev": "node --watch src/app.js"
   },
   "dependencies": {
-    "express": "^4.19.2",
-    "body-parser": "^1.20.2",
+    "axios": "^1.7.2",
     "cors": "^2.8.5",
-    "tencentcloud-sdk-nodejs-hunyuan": "^4.0.0"
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
   }
 }

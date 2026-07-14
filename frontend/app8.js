@@ -1,6 +1,16 @@
 /* 异次元梦想局 · V8.0 逻辑层
  * 五幕引擎（希望/崩塌/废墟/回放/盾牌）· 信任值 · 小雅救援 · 结局确定性判定 · 身份解锁 · 平行宇宙
+ * V8.1：接入混元大模型 API，AI 实时生成对话
  */
+
+/* ---------------- API 配置 ---------------- */
+const API_BASE = window.location.hostname === "localhost"
+  ? "http://localhost:3000"
+  : "https://ai-d9gd4xji5de241243-1453144747.tcloudbaseapp.com/api";
+const API_ENABLED = true; // 开关：是否启用 AI API（关掉则回退到预设话术）
+const API_TIMEOUT = 30000; // 30 秒超时
+// 保存上一次请求参数，用于重试
+let _lastRequest = null;
 
 /* ---------------- 状态 ---------------- */
 const S = {
@@ -126,6 +136,11 @@ function startGame() {
   $("game-root").classList.remove("hidden");
   $("stage-scene").textContent = S.story.scene;
   $("btn-exit").classList.remove("hidden");
+  // 显示 AI 模式指示器
+  if (API_ENABLED) {
+    const aiStatus = $("ai-status");
+    if (aiStatus) aiStatus.style.display = "block";
+  }
   applyActTheme("hope");
   updateTopbar();
   const first = S.story.nodes[S.node];
@@ -285,24 +300,311 @@ function renderOptions(node) {
   }
 }
 
-/* ---------------- 自由文本（反卧底） ---------------- */
-function handleFreeText(text, node) {
+/* ---------------- 自由文本（AI 驱动） ---------------- */
+async function handleFreeText(text, node) {
+  // 1. 显示玩家消息
   pushMessageFinal(S.activeConv, "me", text, null);
+
+  // 2. 本地反卧底检测（仍保留关键词快速检测）
   const target = ACTORS[S.activeConv];
-  let added = 0, warnLine = null;
+  let added = 0;
   if (target && (target.type === "target" || target.type === "accomplice")) {
     for (const rule of ANTI_UNDERCOVER.keywords) {
-      if (rule.re.test(text)) { added = Math.max(added, rule.add); warnLine = rule.line; }
+      if (rule.re.test(text)) { added = Math.max(added, rule.add); }
     }
-    if (!added) added = ANTI_UNDERCOVER.overQuestion.add;
   }
   if (added) bumpSuspicion(added);
+
+  // 3. 如果 API 已启用，调用后端 AI 生成回复
+  if (API_ENABLED) {
+    showTypingAI();
+    try {
+      const result = await callBackendChat(text);
+      hideTypingAI();
+
+      if (!result) throw new Error("AI 返回空结果");
+
+      // 显示 AI 回复
+      const replyConv = result.conversationId || S.activeConv;
+      // 强制切换：若后端指定了不同对话（如紧急任务触发），自动跳转
+      if (replyConv !== S.activeConv) {
+        S.convs[replyConv].unread = true;
+        toast("📨 新消息来自「" + (ACTORS[replyConv]?.name || replyConv) + "」");
+      }
+      pushMessageFinal(replyConv, "ai", result.reply, result.psychologyTag || getStageLabel());
+
+      // 更新信任值
+      if (result.trustDelta && result.trustDelta !== 0) {
+        S.trust = clamp(S.trust + result.trustDelta, 0, 100);
+        updateTopbar();
+        if (result.trustDelta > 0) {
+          toast(`🤝 信任值 +${result.trustDelta}`);
+        } else {
+          toast(`⚠️ 信任值 ${result.trustDelta}`);
+        }
+      }
+
+      // 更新任务
+      if (result.taskUpdate) {
+        const tu = result.taskUpdate;
+        if (tu.status === "completed") {
+          completeTask(tu.taskId);
+          toast(`✅ 任务完成：${tu.taskTitle || ""}`);
+        } else if (tu.status === "updated") {
+          // 更新任务进度
+          if (tu.progress !== undefined) {
+            updateTaskProgress(tu.taskId, tu.progress);
+          }
+          if (tu.increment && tu.increment >= 10) {
+            toast(`📋 任务有进展！（+${tu.increment}%）`);
+          }
+        }
+      }
+
+      // 红标检测
+      if (detectRedFlagLocal(result.reply)) {
+        toast("⚠️ 对方话术中出现了诱导信号，注意警惕！");
+      }
+
+      // 场景切换建议
+      if (result.nextScene === "collapse") {
+        applyActTheme("collapse");
+        toast("🌑 进入第二幕 · 崩塌");
+      }
+
+      // 结局触发
+      if (result.isEnding) {
+        const id = IDENTITIES[S.idKey];
+        const endKey = determineEnding(S.story, {
+          trust: S.trust,
+          evidence: S.evidence,
+          route: S.route || "scammed",
+          xiaoya: S.xiaoya,
+        });
+        setTimeout(() => triggerEnding(endKey), 1000);
+        return;
+      }
+
+      // 检查反卧底暴露
+      if (checkExposed()) return;
+
+      // 更新历史
+      S.history.push({
+        day: S.day,
+        who: (ACTORS[replyConv] || ACTORS[S.activeConv])?.name || replyConv,
+        phase: result.psychologyTag || getStageLabel(),
+        text: result.reply,
+      });
+      updateTopbar();
+      return;
+    } catch (err) {
+      hideTypingAI();
+      console.warn("AI API 调用失败，回退到预设话术：", err.message);
+      // 显示错误消息+重试按钮
+      showErrorWithRetry(err.message, text, node);
+      return;
+    }
+  }
+
+  // 4. 回退：预设话术模式（原有逻辑）
+  let warnLine = null;
+  if (target && (target.type === "target" || target.type === "accomplice")) {
+    for (const rule of ANTI_UNDERCOVER.keywords) {
+      if (rule.re.test(text)) { warnLine = rule.line; break; }
+    }
+  }
   setTimeout(() => {
     if (warnLine) { pushMessageFinal(S.activeConv, "ai", warnLine, "反卧底·警觉"); checkExposed(); }
     if (S.ending) return;
     const cont = node.options.find(o => o.next);
     if (cont && cont.next) setTimeout(() => playNode(cont.next), 400);
   }, 500);
+}
+
+/**
+ * 调用后端 AI 接口（新接口 POST /api/chat）
+ * @param {string} message - 玩家输入
+ * @returns {Promise<{reply, psychologyTag, trustDelta, taskUpdate, nextScene, isEnding}>}
+ */
+async function callBackendChat(message) {
+  // 构建对话历史（最近 10 轮）
+  const convHistory = (S.convs[S.activeConv]?.messages || [])
+    .filter(m => m.text && m.text.trim())
+    .slice(-20) // 取最近 20 条（10 轮对话）
+    .map(m => ({
+      role: m.who === "me" ? "user" : "assistant",
+      content: m.text,
+    }));
+
+  // 构建任务列表
+  const taskList = (S.story?.tasks || []).map(t => ({
+    id: t.id,
+    title: t.title,
+    status: S.tasks[t.id] || "pending",
+  }));
+
+  // 构建请求体（多角色对话交织：带上当前对话角色 ID）
+  const body = {
+    message: message,
+    identity: S.idKey,
+    conversationId: S.activeConv,
+    currentDay: S.day,
+    trustValue: S.trust,
+    conversationHistory: convHistory,
+    tasks: taskList,
+    lastNode: S.node || "",
+  };
+
+  // 保存请求参数用于重试
+  _lastRequest = body;
+
+  const resp = await fetch(`${API_BASE}/api/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(API_TIMEOUT),
+  });
+
+  if (!resp.ok) {
+    const errData = await resp.json().catch(() => ({}));
+    throw new Error(errData.error || `API 返回 ${resp.status}: ${resp.statusText}`);
+  }
+
+  const data = await resp.json();
+  if (!data.success) {
+    throw new Error(data.error || "AI 服务返回错误");
+  }
+
+  return {
+    reply: data.reply || null,
+    psychologyTag: data.psychologyTag || "",
+    trustDelta: data.trustDelta || 0,
+    taskUpdate: data.taskUpdate || null,
+    nextScene: data.nextScene || null,
+    isEnding: data.isEnding || false,
+  };
+}
+
+/**
+ * 重试上一次失败的请求
+ */
+async function retryLastRequest() {
+  if (!_lastRequest) return;
+  // 移除错误消息
+  const area = $("chat-area");
+  const errMsg = area.querySelector(".msg.error-msg");
+  if (errMsg) errMsg.remove();
+
+  showTypingAI();
+  try {
+    const result = await callBackendChat(_lastRequest.message);
+    hideTypingAI();
+
+    if (!result) throw new Error("AI 返回空结果");
+
+    pushMessageFinal(S.activeConv, "ai", result.reply, result.psychologyTag || getStageLabel());
+
+    if (result.trustDelta && result.trustDelta !== 0) {
+      S.trust = clamp(S.trust + result.trustDelta, 0, 100);
+      updateTopbar();
+    }
+    if (result.taskUpdate) {
+      const tu = result.taskUpdate;
+      if (tu.status === "completed") {
+        completeTask(tu.taskId);
+      } else if (tu.status === "updated" && tu.progress !== undefined) {
+        updateTaskProgress(tu.taskId, tu.progress);
+      }
+    }
+    if (result.isEnding) {
+      const endKey = determineEnding(S.story, {
+        trust: S.trust, evidence: S.evidence,
+        route: S.route || "scammed", xiaoya: S.xiaoya,
+      });
+      setTimeout(() => triggerEnding(endKey), 1000);
+    }
+    S.history.push({
+      day: S.day, who: ACTORS[S.activeConv].name,
+      phase: result.psychologyTag || getStageLabel(), text: result.reply,
+    });
+    updateTopbar();
+  } catch (err) {
+    hideTypingAI();
+    showErrorWithRetry(err.message, _lastRequest.message, null);
+  }
+}
+
+/**
+ * 显示错误消息和重试按钮
+ */
+function showErrorWithRetry(errMsg, originalText, node) {
+  const area = $("chat-area");
+  const m = document.createElement("div");
+  m.className = "msg error-msg";
+  m.innerHTML = `
+    <div class="error-bubble">
+      <span class="error-icon">⚠️</span>
+      <span class="error-text">消息发送失败，请重试</span>
+      <span class="error-detail">${escapeHtml(errMsg)}</span>
+      <button class="error-retry-btn" onclick="retryLastRequest()">🔄 重试</button>
+    </div>`;
+  area.appendChild(m);
+  area.scrollTop = area.scrollHeight;
+}
+
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+/**
+ * 显示 AI 正在输入... 的加载状态
+ */
+function showTypingAI() {
+  const area = $("chat-area");
+  // 移除旧的状态
+  hideTypingAI();
+  const m = document.createElement("div");
+  m.className = "msg ai typing-msg";
+  m.id = "ai-typing-msg";
+  m.innerHTML = `
+    <div class="typing-bubble">
+      <div class="typing"><span></span><span></span><span></span></div>
+      <span class="typing-label">对方正在输入...</span>
+    </div>`;
+  area.appendChild(m);
+  area.scrollTop = area.scrollHeight;
+}
+
+/**
+ * 隐藏 AI 加载状态
+ */
+function hideTypingAI() {
+  const t = $("ai-typing-msg");
+  if (t) t.remove();
+}
+
+/**
+ * 获取当前阶段的心理学标注标签
+ */
+function getStageLabel() {
+  const labels = {
+    hope: "寻猪·建立联系",
+    collapse: "崩塌",
+    ruins: "废墟·行动",
+    replay: "回放",
+    shield: "盾牌",
+  };
+  return labels[S.act] || "";
+}
+
+/**
+ * 本地红标检测（AI 回复中是否包含诱导信号词）
+ */
+function detectRedFlagLocal(text) {
+  const flags = ["投资","转账","内部","机会","收益","账户","理财","平台","充值","提现","保证金","稳赚","漏洞","内幕"];
+  return flags.some(w => text.includes(w));
 }
 
 /* ---------------- 选择选项 ---------------- */
@@ -337,9 +639,19 @@ function checkExposed() {
 }
 
 /* ---------------- 任务 ---------------- */
+function updateTaskProgress(taskId, progress) {
+  if (!S.taskProgress) S.taskProgress = {};
+  S.taskProgress[taskId] = clamp(progress, 0, 100);
+  // 如果进度达到100%，自动完成
+  if (progress >= 100 && S.tasks[taskId] === "active") {
+    completeTask(taskId);
+  }
+}
 function completeTask(taskId) {
   if (S.tasks[taskId] === "completed") return;
   S.tasks[taskId] = "completed";
+  if (!S.taskProgress) S.taskProgress = {};
+  S.taskProgress[taskId] = 100;
   const t = S.story.tasks.find(x => x.id === taskId);
   if (t) toast("✅ 任务完成：" + t.title);
   S.story.tasks.forEach(x => { if (x.cond === taskId && S.tasks[x.id] === "pending") S.tasks[x.id] = "active"; });
@@ -352,7 +664,17 @@ function renderTasks() {
     const icon = st === "completed" ? "✅" : st === "active" ? "🟡" : "🔒";
     const cls = st === "completed" ? "done" : st === "active" ? "active" : "locked";
     const dep = (st === "pending" && t.cond) ? `<div class="task-dep">需先完成上一项</div>` : "";
-    return `<div class="task-card ${cls}"><div class="task-h">${icon} ${t.title}</div>${dep}</div>`;
+    // 进度条（仅活跃任务显示）
+    const prog = (S.taskProgress && S.taskProgress[t.id]) || 0;
+    const progBar = (st === "active")
+      ? `<div class="task-prog-bar"><div class="task-prog-fill" style="width:${prog}%"></div></div>
+         <div class="task-prog-num">${prog}%</div>`
+      : (st === "completed" ? `<div class="task-prog-num done">100%</div>` : "");
+    return `<div class="task-card ${cls}">
+      <div class="task-h">${icon} ${t.title}</div>
+      ${progBar}
+      ${dep}
+    </div>`;
   }).join("");
   const done = Object.values(S.tasks).filter(x=>x==="completed").length;
   $("task-progress").textContent = `进度 ${done}/${S.story.tasks.length} · 证据 ${S.evidence} 项`;
@@ -624,3 +946,6 @@ $("btn-exit").addEventListener("click", () => {
 
 /* ---------------- 启动：先尝试恢复进度 ---------------- */
 loadProgress();
+
+/* ---------------- 暴露全局函数（HTML onclick 调用） ---------------- */
+window.retryLastRequest = retryLastRequest;

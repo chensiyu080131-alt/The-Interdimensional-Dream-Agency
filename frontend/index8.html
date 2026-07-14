@@ -224,6 +224,24 @@
     #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
     @keyframes shake{0%,100%{transform:translate(0,0)}20%{transform:translate(-6px,3px)}40%{transform:translate(5px,-4px)}60%{transform:translate(-4px,2px)}80%{transform:translate(3px,-3px)}}
     .phone.shake{animation:shake .5s;}
+
+    /* AI 加载状态：对方正在输入... */
+    .typing-bubble{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.08);border-radius:18px 18px 18px 4px;padding:10px 16px;max-width:85%;}
+    .typing-label{font-size:12px;color:rgba(255,255,255,.45);white-space:nowrap;}
+
+    /* 错误消息 + 重试按钮 */
+    .error-bubble{display:flex;flex-direction:column;gap:6px;background:rgba(220,20,60,.12);border:1px solid rgba(220,20,60,.3);border-radius:14px;padding:12px 14px;max-width:88%;margin:0 auto;}
+    .error-icon{font-size:16px;}
+    .error-text{font-size:13px;color:#ffb3b3;font-weight:600;}
+    .error-detail{font-size:11px;color:rgba(255,255,255,.4);word-break:break-all;line-height:1.4;}
+    .error-retry-btn{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:10px;color:#fff;font-size:13px;padding:8px 14px;cursor:pointer;align-self:flex-start;transition:background .15s;}
+    .error-retry-btn:active{background:rgba(255,255,255,.22);}
+
+    /* 任务进度条 */
+    .task-prog-bar{width:100%;height:4px;background:rgba(255,255,255,.08);border-radius:2px;margin-top:6px;overflow:hidden;}
+    .task-prog-fill{height:100%;background:linear-gradient(90deg,var(--hl),var(--gold));border-radius:2px;transition:width .5s ease;}
+    .task-prog-num{font-size:10px;color:rgba(255,255,255,.4);text-align:right;margin-top:2px;}
+    .task-prog-num.done{color:#07C160;}
   </style>
 </head>
 <body>
@@ -258,7 +276,11 @@
       </div>
 
       <div class="chat-area" id="chat-area"></div>
-      <div class="options-bar" id="options-bar"></div>
+      <div class="options-bar" id="options-bar">
+        <div id="ai-status" style="text-align:center;font-size:11px;color:rgba(7,193,96,.7);padding:4px 0;display:none">
+          🤖 AI 对话模式 · 输入任意文字，角色会实时回应
+        </div>
+      </div>
 
       <nav class="navbar">
         <button class="nav-item" id="nav-conv"><span class="ic">💬</span>对话</button>
