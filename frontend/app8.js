@@ -31,6 +31,8 @@ const S = {
   ruinsDone: {},       // 第三幕已完成的行动
   unlocked: {},        // 已解锁身份
   redflags: {},        // 红标（踩坑点）记录，供避坑报告生成器使用
+  evidenceFrags: {},   // M4.1 证据墙：已收集碎片 {fragId:true}
+  lastScenarioCautious: null, // M4.1 反杀判定：最终抉择是否谨慎
   finished: {},        // 已完成的线 {id: good}
 };
 
@@ -131,6 +133,7 @@ function startGame() {
   S.day = 1; S.act = "hope";
   S.suspicion = 0; S.trust = 50; S.exposure = 0; S.evidence = 0; S.xiaoya = 0; S.route = null;
   S.ending = null; S.endingKey = null; S.history = []; S.ruinsDone = {};
+  S.redflags = {}; S.evidenceFrags = {}; S.lastScenarioCautious = null;
   // M3 心理弱点系统初始化
   S.weakness = assignWeakness(S.idKey);
   S.weaknessHits = 0; S.weaknessShown = {}; S.choices = [];
@@ -645,6 +648,7 @@ function chooseOption(opt) {
   if (opt.exposure) S.exposure = clamp(S.exposure + opt.exposure, 0, 4);
   if (opt.grant) completeTask(opt.grant);
   if (opt.evidence) { S.evidence++; toast("📎 已固定 1 项证据（共 " + S.evidence + " 项）"); }
+  if (opt.redflag === "rf_transfer") triggerTransferShake();
   if (opt.xiaoya) { S.xiaoya = clamp(S.xiaoya + opt.xiaoya, 0, 3); toast("🆘 小雅救援进度 +" + opt.xiaoya); }
   if (opt.susp) bumpSuspicion(opt.susp);
   if (opt.route && !S.route) S.route = opt.route;
@@ -1038,7 +1042,8 @@ $("profile-close").addEventListener("click", () => hide("profile-overlay"));
 function hideAll() {
   ["idselect-overlay","identity-overlay","ruins-overlay","replay-overlay","parallel-overlay",
    "shield-overlay","toolbox-overlay","convlist-overlay","task-overlay","status-overlay","profile-overlay",
-   "scenario-picker-overlay","scenario-result-overlay","ending-gallery-overlay"].forEach(hide);
+   "scenario-picker-overlay","scenario-result-overlay","ending-gallery-overlay",
+   "evidence-overlay","quick-overlay","quick-result-overlay"].forEach(hide);
 }
 $("btn-exit").addEventListener("click", () => {
   if (confirm("退出当前任务？进度不会保存。")) {
@@ -1048,6 +1053,28 @@ $("btn-exit").addEventListener("click", () => {
     else showIdentitySelect();
   }
 });
+
+/* ---------------- M4.4 转账冷灰 + 震动 ---------------- */
+function triggerTransferShake() {
+  const phone = $("phone");
+  if (phone) {
+    phone.classList.add("shake", "cold");
+    setTimeout(() => phone.classList.remove("shake"), 520);
+    setTimeout(() => phone.classList.remove("cold"), 900);
+  }
+}
+function screenShake() {
+  const phone = $("phone");
+  if (phone) { phone.classList.add("shake"); setTimeout(() => phone.classList.remove("shake"), 520); }
+}
+/* M4.1 更新场景顶栏证据徽标 */
+function updateEvidenceBadge() {
+  const b = $("evidence-badge");
+  if (!b) return;
+  const { got, total } = evidenceProgress(S.scenarioKey);
+  b.textContent = `📎 证据 ${got}/${total}`;
+  b.style.display = (S.scenarioMode && total > 0) ? "inline-flex" : "none";
+}
 
 /* ---------------- 单人反诈演练（M2 十类独立场景） ---------------- */
 function openScenarioPicker() {
@@ -1063,8 +1090,13 @@ function openScenarioPicker() {
       <div class="idopt-mid">
         <div class="idopt-name">${t.emoji} ${t.name}</div>
         <div class="idopt-ms">${sc.scene}</div>
+      </div>
+      <div class="idopt-btns">
+        <button class="idopt-go" data-k="${key}">演练</button>
+        <button class="idopt-quick" data-k="${key}">⚡快速</button>
       </div>`;
-    row.addEventListener("click", () => { hide("scenario-picker-overlay"); startScenario(key); });
+    row.querySelector(".idopt-go").addEventListener("click", (e) => { e.stopPropagation(); hide("scenario-picker-overlay"); startScenario(key); });
+    row.querySelector(".idopt-quick").addEventListener("click", (e) => { e.stopPropagation(); startQuickMode(key); });
     box.appendChild(row);
   });
   show("scenario-picker-overlay");
@@ -1080,6 +1112,8 @@ function startScenario(key) {
   S.scenarioKey = key;
   S.scenarioType = sc.typeKey;
   S.redflags = {};
+  S.evidenceFrags = {};
+  S.lastScenarioCautious = null;
   S.scenarioNode = sc.start;
   S.history = [];
   S.convs = { scammer: { unread: false, messages: [] } };
@@ -1095,6 +1129,7 @@ function startScenario(key) {
   $("act-sub").textContent = "识别红标，别踩坑";
   const suspWrap = $("susp-wrap"); if (suspWrap) suspWrap.classList.add("hidden");
   applyActTheme("hope");
+  updateEvidenceBadge();
   playScenario(sc.start);
 }
 
@@ -1107,8 +1142,10 @@ function playScenario(nodeId) {
   showTyping();
   setTimeout(() => {
     hideTyping();
-    typeWriter(spk, node.text, node.phase || "", () => {
-      S.history.push({ who: "骗子", phase: node.phase, text: node.text });
+    // M4.2 话术多样化：护栏内随机挑选变体
+    const line = pickScammerLine(node);
+    typeWriter(spk, line, node.phase || "", () => {
+      S.history.push({ who: "骗子", phase: node.phase, text: line });
       renderScenarioOptions(node);
     });
   }, 450);
@@ -1117,6 +1154,26 @@ function playScenario(nodeId) {
 function renderScenarioOptions(node) {
   const bar = $("options-bar");
   bar.innerHTML = "";
+  // M4.1 证据墙：若本节点暴露可疑碎片且尚未收集，显示“收集”提示
+  const evChip = $("evidence-chip");
+  if (node.frag && !(S.evidenceFrags && S.evidenceFrags[node.frag])) {
+    const fdef = (SCENARIOS[S.scenarioKey].fragments || []).find(f => f.id === node.frag);
+    if (evChip && fdef) {
+      const t = EVIDENCE_TYPES[fdef.type] || EVIDENCE_TYPES.script;
+      evChip.style.display = "flex";
+      evChip.innerHTML = `<span class="ec-ico">${t.icon}</span><span class="ec-txt">发现可疑线索：<b style="color:${t.color}">${t.label}</b></span>` +
+        `<button class="ec-btn" id="evidence-collect-btn">📎 收集</button>`;
+      $("evidence-collect-btn").onclick = () => {
+        if (collectFragment(node.frag)) {
+          toast("📎 已固定证据：" + (EVIDENCE_TYPES[fdef.type] || EVIDENCE_TYPES.script).label);
+          evChip.style.display = "none";
+          updateEvidenceBadge();
+        }
+      };
+    }
+  } else if (evChip) {
+    evChip.style.display = "none";
+  }
   (node.options || []).forEach(opt => {
     const b = document.createElement("button");
     b.className = "opt-btn";
@@ -1133,7 +1190,12 @@ function renderScenarioOptions(node) {
 function chooseScenarioOption(opt) {
   pushMessageFinal(S.activeConv, "me", opt.text, null);
   if (opt.redflag) trackRedflag(opt.redflag);
+  // M4.1 记录最终抉择是否谨慎
+  S.lastScenarioCautious = (opt.tone === "cautious");
+  // M4.4 转账冷灰+震动：踩到“转账要求”红标时触发
+  if (opt.redflag === "rf_transfer") triggerTransferShake();
   $("options-bar").innerHTML = "";
+  const evChip = $("evidence-chip"); if (evChip) evChip.style.display = "none";
   if (opt.next && SCENARIOS[S.scenarioKey].nodes[opt.next]) {
     setTimeout(() => playScenario(opt.next), 350);
   } else {
@@ -1147,6 +1209,18 @@ function finishScenario() {
   $("game-root").classList.add("hidden");
   $("scen-result-hd").textContent = "演练复盘 · " + t.name;
   $("scen-result-debrief").textContent = sc.debrief;
+  // M4.1 隐藏结局「反杀」：集齐证据 + 最终谨慎
+  const counters = checkCountersEnding(sc.typeKey, S.lastScenarioCautious);
+  const badge = $("scen-counters-badge");
+  if (badge) {
+    if (counters) {
+      const ce = countersEndingText(sc.typeKey);
+      badge.style.display = "block";
+      badge.innerHTML = `<div class="ce-title">${ce.title}</div><div class="ce-desc">${ce.desc}</div>`;
+    } else {
+      badge.style.display = "none";
+    }
+  }
   $("pitfall-report-scen").innerHTML = buildPitfallReportHTML("pitfall-scen");
   const ps = $("pitfall-scen-share");
   if (ps) ps.addEventListener("click", shareReportImage);
@@ -1154,6 +1228,15 @@ function finishScenario() {
 }
 $("scen-replay-btn").addEventListener("click", () => { hide("scenario-result-overlay"); startScenario(S.scenarioKey); });
 $("scen-back-btn").addEventListener("click", () => { hide("scenario-result-overlay"); openScenarioPicker(); });
+
+/* M4.1 证据墙入口与快速模式退出 */
+$("evidence-open").addEventListener("click", () => {
+  renderEvidenceWall("evidence-grid", S.scenarioKey);
+  show("evidence-overlay");
+});
+$("evidence-close").addEventListener("click", () => hide("evidence-overlay"));
+$("quick-exit").addEventListener("click", exitQuickMode);
+$("quick-result-back").addEventListener("click", exitQuickMode);
 
 /* ---------------- M3 结局图鉴（6 身份 × 各自结局矩阵） ---------------- */
 function renderEndingGallery() {
