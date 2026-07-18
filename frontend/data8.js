@@ -30,6 +30,7 @@ const IDENTITIES = {
     ],
     oath: "“7天，只许成功，不许失败。”",
     exp: "紧张刺激的卧底体验",
+    scamTypes: ["pig_butcher", "fake_invest"],
     act: "hope",
   },
   scribe: {
@@ -47,6 +48,7 @@ const IDENTITIES = {
     ],
     oath: "“真相，值得我冒这个险。”",
     exp: "揭开黑幕的使命感",
+    scamTypes: ["fake_invest", "brushing", "impersonate_police"],
     act: "hope",
   },
   lighthouse: {
@@ -64,6 +66,7 @@ const IDENTITIES = {
     ],
     oath: "“哪怕只救回一个人，也值得。”",
     exp: "助人者的责任感",
+    scamTypes: ["fake_cs", "fake_credit", "game_trade"],
     act: "hope",
   },
   drift: {
@@ -81,6 +84,7 @@ const IDENTITIES = {
     ],
     oath: "“我只是想认识个朋友而已。”",
     exp: "原设计的沉浸体验",
+    scamTypes: ["pig_butcher", "brushing", "fake_shop"],
     act: "hope",
   },
   seeker: {
@@ -98,6 +102,7 @@ const IDENTITIES = {
     ],
     oath: "“陈露，等我，我一定把你找回来。”",
     exp: "急迫感和情感驱动",
+    scamTypes: ["dating", "impersonate_boss"],
     act: "hope",
   },
   mole: {
@@ -115,6 +120,7 @@ const IDENTITIES = {
     ],
     oath: "“我在他们中间，但我不是他们。”",
     exp: "最危险的体验",
+    scamTypes: ["fake_invest", "impersonate_police", "brushing"],
     act: "hope",
   },
 };

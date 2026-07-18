@@ -211,6 +211,28 @@
     .shield-tips{margin-top:6px;}
     .shield-tip{font-size:13px;color:#cdd3e0;padding:6px 0;border-bottom:1px dashed rgba(255,255,255,.1);}
 
+  /* ===== M2 避坑报告生成器 ===== */
+  .pf-wrap{margin-top:12px;border-top:1px solid rgba(255,255,255,.12);padding-top:12px;}
+  .pf-hd{font-size:15px;font-weight:800;color:var(--gold);margin-bottom:10px;}
+  .pf-score{text-align:center;margin-bottom:12px;}
+  .pf-score-num{font-size:26px;font-weight:900;}
+  .pf-score-sub{font-size:12px;color:var(--tx2);margin-top:4px;}
+  .pf-bar{height:8px;border-radius:4px;background:rgba(255,255,255,.1);overflow:hidden;margin-top:8px;}
+  .pf-bar-fill{height:100%;border-radius:4px;transition:width .6s ease;}
+  .pf-sec-t{font-size:13px;font-weight:700;color:#9FD0FF;margin:12px 0 6px;}
+  .pf-chips{display:flex;flex-wrap:wrap;gap:6px;}
+  .pf-chip{font-size:11px;background:rgba(30,144,255,.16);border:1px solid rgba(30,144,255,.35);color:#cfe4ff;border-radius:20px;padding:4px 10px;}
+  .pf-flag{background:rgba(220,20,60,.1);border:1px solid rgba(220,20,60,.3);border-radius:12px;padding:10px;margin-bottom:8px;}
+  .pf-flag-h{display:flex;align-items:center;gap:6px;font-size:13px;}
+  .pf-flag-dot{width:8px;height:8px;border-radius:50%;background:#DC143C;display:inline-block;}
+  .pf-flag-cat{font-size:10px;color:rgba(255,255,255,.5);margin-left:auto;border:1px solid rgba(255,255,255,.2);border-radius:10px;padding:1px 7px;}
+  .pf-flag-why{font-size:12px;color:#e7d2d2;line-height:1.6;margin-top:5px;}
+  .pf-flag-save{font-size:12px;color:#9affc0;line-height:1.6;margin-top:5px;}
+  .pf-clean{background:rgba(7,193,96,.12);border:1px solid rgba(7,193,96,.35);border-radius:12px;padding:12px;font-size:13px;color:#bff3d3;line-height:1.7;}
+  .pf-young{font-size:13px;color:#ffd6a0;background:rgba(255,165,0,.1);border-radius:10px;padding:10px;line-height:1.6;}
+  .pf-peer{font-size:12px;color:#dfe4ef;background:rgba(255,255,255,.05);border-radius:10px;padding:10px;line-height:1.7;}
+  .pf-poem{font-size:14px;font-weight:700;color:#FFD700;background:rgba(255,215,0,.1);border:1px dashed rgba(255,215,0,.4);border-radius:12px;padding:12px;margin-top:10px;text-align:center;}
+
     /* 工具箱 */
     .tool-item{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.08);}
     .tool-ic{width:38px;height:38px;border-radius:10px;background:rgba(7,193,96,.15);color:#7fe0ab;display:flex;align-items:center;justify-content:center;font-size:18px;flex:0 0 auto;}
@@ -467,6 +489,7 @@
       <div class="shield-stats" id="shield-stats"></div>
       <div class="shield-weak" id="shield-weak"></div>
       <div class="shield-tips" id="shield-tips"></div>
+      <div class="pf-wrap" id="pitfall-report"></div>
       <div class="disclaimer-box">
         <b>免责声明：</b>本产品为反诈教育模拟演示，全部人物、情节、话术均为虚构，仅用于提升公众防范意识，切勿在现实中模仿任何诈骗行为。
         根据《中华人民共和国刑法》第二百六十六条，诈骗公私财物数额较大的，处三年以下有期徒刑、拘役或者管制，并处或者单处罚金。
@@ -488,6 +511,8 @@
   </div>
 
   <script src="data8.js"></script>
+  <script src="scamTypes.js"></script>
+  <script src="report.js"></script>
   <script src="app8.js"></script>
 </body>
 </html>

@@ -28,6 +28,7 @@ const S = {
   history: [],         // 时间线
   ruinsDone: {},       // 第三幕已完成的行动
   unlocked: {},        // 已解锁身份
+  redflags: {},        // 红标（踩坑点）记录，供避坑报告生成器使用
   finished: {},        // 已完成的线 {id: good}
 };
 
@@ -609,6 +610,7 @@ function detectRedFlagLocal(text) {
 
 /* ---------------- 选择选项 ---------------- */
 function chooseOption(opt) {
+  trackFromChoice(opt);
   pushMessageFinal(S.activeConv, "me", opt.text, null);
   if (opt.trust) S.trust = clamp(S.trust + opt.trust, 0, 100);
   if (opt.exposure) S.exposure = clamp(S.exposure + opt.exposure, 0, 4);
@@ -948,6 +950,10 @@ function runShield() {
     "3. 感到不对劲时，先告诉一个信任的人。",
   ].map(t => `<div class="shield-tip">${t}</div>`).join("");
   renderToolbox();
+  // M2 避坑报告生成器
+  $("pitfall-report").innerHTML = buildPitfallReportHTML();
+  const ps = $("pitfall-share");
+  if (ps) ps.addEventListener("click", shareReportImage);
   show("shield-overlay");
 }
 $("shield-restart").addEventListener("click", () => { hideAll(); showIdentitySelect(); });
