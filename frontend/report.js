@@ -35,10 +35,20 @@ function trackFromChoice(opt) {
   if (/公检法|通缉|逮捕|领导|老板|书记|主任|配合清查|逾期|注销|征信|涉案/.test(phase) && opt.tone !== "cautious") trackRedflag("rf_obey");
 }
 
-/* 构建避坑报告 HTML（注入到 #pitfall-report） */
-function buildPitfallReportHTML() {
+/* 报告所用「骗局类型」解析：场景模式优先用 S.scenarioType，否则用身份 scamTypes */
+function reportTypes() {
+  if (S.scenarioType) {
+    const t = SCAM_TYPES[S.scenarioType];
+    return t ? [t] : [];
+  }
   const idObj = IDENTITIES[S.idKey];
-  const types = (idObj.scamTypes || []).map((t) => SCAM_TYPES[t]).filter(Boolean);
+  return (idObj.scamTypes || []).map((t) => SCAM_TYPES[t]).filter(Boolean);
+}
+
+/* 构建避坑报告 HTML（注入到对应容器；mountKey 用于区分盾牌屏 / 场景结果屏的分享按钮 id） */
+function buildPitfallReportHTML(mountKey) {
+  mountKey = mountKey || "pitfall";
+  const types = reportTypes();
   const triggered = Object.keys(S.redflags || {});
 
   // 该身份涉及类型的全部红标池
@@ -107,15 +117,14 @@ function buildPitfallReportHTML() {
 
     <div class="pf-poem">🔑 防骗口诀：${poem}</div>
 
-    <button class="btn" id="pitfall-share" style="background:#7B5CFF;margin-top:12px">📸 保存/分享我的避坑报告</button>
+    <button class="btn" id="${mountKey}-share" style="background:#7B5CFF;margin-top:12px">📸 保存/分享我的避坑报告</button>
   `;
 }
 
 /* 截图分享：将报告渲染为图片（canvas），优先 Web Share，否则下载 PNG */
 function shareReportImage() {
   try {
-    const idObj = IDENTITIES[S.idKey];
-    const types = (idObj.scamTypes || []).map((t) => SCAM_TYPES[t]).filter(Boolean);
+    const types = reportTypes();
     const triggered = Object.keys(S.redflags || {});
     const pool = new Set();
     types.forEach((t) => (t.redFlags || []).forEach((f) => pool.add(f)));

@@ -41,6 +41,10 @@
     .warn-box{background:rgba(220,20,60,.14);border:1px solid var(--warn);border-radius:14px;padding:14px;margin:6px 0 16px;}
     .warn-box p{color:#ffb3b3;margin-bottom:6px;font-size:13px;}.warn-box p:last-child{margin-bottom:0;}
     .warn-screen .age{font-size:12px;color:#8a93a8;text-align:center;margin:12px 0;}
+    /* M2 单人演练入口按钮 */
+    .drill-btn{margin-top:14px;background:linear-gradient(90deg,#7B5CFF,#5566ff);color:#fff;border:none;border-radius:14px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;}
+    .drill-btn:active{opacity:.85;}
+    .scen-debrief{background:rgba(127,178,255,.12);border-left:3px solid var(--hl);border-radius:10px;padding:11px 13px;font-size:13px;color:#cfe0ff;line-height:1.7;margin:12px 0 4px;}
     .agree{background:#07C160;color:#fff;border:none;border-radius:14px;padding:15px;font-size:16px;font-weight:800;cursor:pointer;width:100%;}
     .disagree{background:none;color:#8a93a8;border:1px solid #2a3150;border-radius:14px;padding:11px;font-size:13px;margin-top:10px;cursor:pointer;width:100%;}
 
@@ -126,6 +130,48 @@
     .opt-neutral{background:rgba(87,107,149,.3);color:#a9b8dc;}
     .opt-cautious{background:rgba(7,193,96,.2);color:#7fe0ab;}
     .opt-counter{background:rgba(142,68,173,.3);color:#d5a9ec;}
+    /* M2 演练选项标签：坑=危险选项，稳=安全选项 */
+    .opt-bad{background:rgba(220,20,60,.32);color:#ff9aa6;}
+    .opt-good{background:rgba(7,193,96,.28);color:#7fe0ab;}
+    /* M3 弱点加权：命中玩家弱点的“配合”选项更显眼 */
+    .opt-weak{background:rgba(255,107,53,.45);color:#ffd9b0;animation:pulseWeak 1.4s infinite;}
+    @keyframes pulseWeak{0%,100%{box-shadow:0 0 0 0 rgba(255,107,53,.0);}50%{box-shadow:0 0 0 3px rgba(255,107,53,.35);}}
+    .opt-weak-hi{border-color:rgba(255,107,53,.55);}
+
+    /* M3 内心戏旁白：第二人称半透明浮层 */
+    .inner-mono{position:absolute;left:50%;top:30%;transform:translate(-50%,-50%) scale(.96);
+      max-width:80%;z-index:85;pointer-events:none;opacity:0;transition:opacity .5s,transform .5s;
+      background:rgba(10,14,28,.82);border:1px solid rgba(127,178,255,.4);border-radius:16px;
+      padding:16px 18px;font-size:14px;line-height:1.7;color:#cfe0ff;font-style:italic;text-align:center;
+      box-shadow:0 8px 30px rgba(0,0,0,.5);}
+    .inner-mono.show{opacity:1;transform:translate(-50%,-50%) scale(1);}
+
+    /* M3 蝴蝶效应流程图 */
+    .butterfly-list{max-height:230px;overflow-y:auto;margin:6px 0 12px;padding:4px 2px;}
+    .bf-node{background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:12px;padding:10px 12px;}
+    .bf-idx{font-size:11px;color:var(--hl);font-weight:700;margin-bottom:3px;}
+    .bf-phase{font-size:11px;color:#8a93a8;margin-bottom:4px;}
+    .bf-chosen{font-size:13px;color:#9fe6c0;}
+    .bf-alt{font-size:12px;color:#9aa6c4;margin-top:3px;}
+    .bf-arrow{text-align:center;color:#4a557a;font-size:16px;margin:2px 0;}
+    .bf-empty{font-size:13px;color:var(--tx2);padding:8px;}
+
+    /* M3 结局图鉴 */
+    .gallery-sheet{max-width:460px;}
+    .gallery-sub{font-size:12px;color:var(--tx2);margin:4px 0 12px;}
+    .ending-gallery-list{max-height:64vh;overflow-y:auto;}
+    .eg-id{margin-bottom:16px;}
+    .eg-id-h{font-size:14px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:8px;}
+    .eg-av{width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:13px;color:#fff;}
+    .eg-count{margin-left:auto;font-size:12px;color:var(--hl);background:rgba(127,178,255,.12);padding:2px 8px;border-radius:8px;}
+    .eg-cells{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+    .eg-cell{background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:10px;padding:9px 10px;font-size:12px;}
+    .eg-cell.good{border-left:3px solid #07C160;}
+    .eg-cell.bad{border-left:3px solid #DC143C;}
+    .eg-cell.locked{opacity:.55;border-style:dashed;text-align:center;}
+    .eg-t{font-weight:700;margin-bottom:4px;color:#e6eef8;}
+    .eg-r{color:#a9b3c9;line-height:1.6;}
+    .eg-lock{color:#6f7794;}
     .free-row{display:flex;gap:8px;}
     .free-input{flex:1;border:1px solid var(--line);background:rgba(255,255,255,.06);color:#fff;border-radius:14px;padding:11px 13px;font-size:14px;}
     .free-input::placeholder{color:#6f7794;}
@@ -302,6 +348,9 @@
 <body>
   <div class="phone" id="phone">
 
+    <!-- M3 内心戏旁白（第二人称半透明浮层） -->
+    <div class="inner-mono" id="inner-mono"></div>
+
     <!-- 游戏主界面 -->
     <div id="game-root" class="hidden" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
       <div class="topbar">
@@ -377,8 +426,28 @@
         <p class="age">适合 16 岁以上人群。你即将经历的，是别人真实发生过的人生。</p>
         <button class="agree" id="warn-agree">领取我的身份，开始任务</button>
         <button class="disagree" id="warn-disagree">暂不开始</button>
+        <button class="drill-btn" id="warn-drill">🎯 单人反诈演练（十类高发骗局独立体验）</button>
+        <button class="disagree" id="warn-gallery-btn" style="background:#3a3a5a">🏛 结局图鉴</button>
       </div>
     </div>
+
+    <!-- 单人反诈演练 · 场景选择 -->
+    <div class="overlay" id="scenario-picker-overlay"><div class="sheet idselect-sheet">
+      <div class="idselect-hd">🎯 选择要演练的骗局类型</div>
+      <div class="idselect-list" id="scenario-picker-list"></div>
+      <button class="disagree" id="scenario-picker-close">返回</button>
+    </div></div>
+
+    <!-- 单人反诈演练 · 复盘结果 -->
+    <div class="overlay" id="scenario-result-overlay"><div class="sheet shield-card">
+      <div class="shield-hd" id="scen-result-hd">演练复盘</div>
+      <div class="scen-debrief" id="scen-result-debrief"></div>
+      <div class="pitfall-report" id="pitfall-report-scen"></div>
+      <div style="display:flex;gap:10px;margin-top:14px">
+        <button class="btn" id="scen-replay-btn" style="flex:1;background:#07C160">🔁 再来一次</button>
+        <button class="btn" id="scen-back-btn" style="flex:1;background:#3a4a6a">📋 演练列表</button>
+      </div>
+    </div></div>
 
     <!-- 身份选择（含解锁） -->
     <div class="overlay" id="idselect-overlay"><div class="sheet idselect-sheet">
@@ -460,6 +529,8 @@
       </div>
       <h2 style="font-size:15px">📜 你的故事时间线</h2>
       <div id="timeline-list" style="margin:8px 0 12px"></div>
+      <h2 style="font-size:15px">🦋 蝴蝶效应 · 你的关键抉择</h2>
+      <div id="butterfly-list" class="butterfly-list"></div>
       <button class="btn" id="parallel-btn" style="background:#8E44AD">🌀 平行宇宙：如果当时你这样说……</button>
       <button class="btn" id="replay-continue" style="background:#1E90FF">进入第五幕 · 盾牌 →</button>
       <button class="btn gray" id="replay-close">返回</button>
@@ -496,6 +567,7 @@
         如现实中遭遇类似情况，请立即拨打 <b>110</b> 或全国反诈专线 <b>96110</b>；如感到心理不适，可拨打心理援助热线 <b>12320</b>。
       </div>
       <button class="btn" id="shield-toolbox-btn" style="background:#07C160;margin-top:12px">🛡 打开防骗工具箱</button>
+      <button class="btn" id="shield-gallery-btn" style="background:#7B5CFF;margin-top:8px">🏛 查看结局图鉴</button>
       <button class="btn gray" id="shield-restart">换个身份，再来一局</button>
     </div></div>
 
@@ -508,11 +580,21 @@
       <button class="btn gray" id="toolbox-close">收起</button>
     </div></div>
 
+    <!-- M3 结局图鉴 -->
+    <div class="overlay" id="ending-gallery-overlay"><div class="sheet gallery-sheet">
+      <h2>🏛 结局图鉴</h2>
+      <p class="gallery-sub">6 身份 × 各自结局，已解锁的会显示复盘，未解锁的留白等你探索。多周目，解锁全部真相。</p>
+      <div id="ending-gallery-list" class="ending-gallery-list"></div>
+      <button class="btn gray" id="ending-gallery-close">收起</button>
+    </div></div>
+
   </div>
 
   <script src="data8.js"></script>
   <script src="scamTypes.js"></script>
   <script src="report.js"></script>
+  <script src="scenarios.js"></script>
+  <script src="weakness.js"></script>
   <script src="app8.js"></script>
 </body>
 </html>

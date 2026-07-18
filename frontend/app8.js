@@ -15,6 +15,8 @@ let _lastRequest = null;
 /* ---------------- 状态 ---------------- */
 const S = {
   idKey: null, story: null, node: null, activeConv: null,
+  scenarioMode: false, scenarioKey: null, scenarioType: null,
+  weakness: null, weaknessHits: 0, weaknessShown: {}, choices: [],
   day: 1, act: "hope",
   suspicion: 0,        // 骗子怀疑度（反卧底，可见）
   trust: 50,           // 信任值 0-100（不可见，影响 AI 推进/结局）
@@ -42,12 +44,12 @@ const clamp = (v,min,max) => Math.max(min, Math.min(max, v));
 /* ---------------- 本地存储：解锁进度 ---------------- */
 const SAVE_KEY = "yzc_dmju_v8";
 function loadProgress() {
-  try { const d = JSON.parse(localStorage.getItem(SAVE_KEY) || "{}"); S.unlocked = d.unlocked || {}; S.finished = d.finished || {}; }
-  catch(e){ S.unlocked = {}; S.finished = {}; }
+  try { const d = JSON.parse(localStorage.getItem(SAVE_KEY) || "{}"); S.unlocked = d.unlocked || {}; S.finished = d.finished || {}; S.unlockedEndings = d.unlockedEndings || {}; }
+  catch(e){ S.unlocked = {}; S.finished = {}; S.unlockedEndings = {}; }
   S.unlocked.hunter = true; // 默认解锁
 }
 function saveProgress() {
-  localStorage.setItem(SAVE_KEY, JSON.stringify({ unlocked: S.unlocked, finished: S.finished }));
+  localStorage.setItem(SAVE_KEY, JSON.stringify({ unlocked: S.unlocked, finished: S.finished, unlockedEndings: S.unlockedEndings }));
 }
 function isUnlocked(key) { return !!S.unlocked[key]; }
 function checkUnlockAfterFinish(idKey, good) {
@@ -129,6 +131,9 @@ function startGame() {
   S.day = 1; S.act = "hope";
   S.suspicion = 0; S.trust = 50; S.exposure = 0; S.evidence = 0; S.xiaoya = 0; S.route = null;
   S.ending = null; S.endingKey = null; S.history = []; S.ruinsDone = {};
+  // M3 心理弱点系统初始化
+  S.weakness = assignWeakness(S.idKey);
+  S.weaknessHits = 0; S.weaknessShown = {}; S.choices = [];
   S.tasks = {};
   S.story.tasks.forEach(t => { S.tasks[t.id] = (t.cond ? "pending" : "active"); });
   S.convs = {};
@@ -244,6 +249,15 @@ function playNode(nodeId) {
     typeWriter(spk, node.text, node.phase, () => {
       S.history.push({ day: node.day, who: ACTORS[spk].name, phase: node.phase, text: node.text });
       updateTopbar();
+      // M3 内心戏旁白：grooming 阶段、命中玩家弱点的节点注入第二人称浮层
+      if (!S.scenarioMode && S.weakness && node.act === "hope") {
+        const w = weaknessHit(node, S.weakness);
+        if (w && !S.weaknessShown[nodeId]) {
+          S.weaknessShown[nodeId] = true;
+          S.weaknessHits = (S.weaknessHits || 0) + 1;
+          showInnerMonologue(w.monologues[Math.floor(Math.random() * w.monologues.length)]);
+        }
+      }
       if (spk === S.activeConv) renderOptions(node);
     });
   }, 500);
@@ -283,7 +297,11 @@ function renderOptions(node) {
     const b = document.createElement("button");
     b.className = "opt-btn";
     const t = TONE[opt.tone] || TONE.neutral;
-    b.innerHTML = `<span class="otype ${t.cls}">${t.label}</span>${opt.text}`;
+    // M3 弱点加权：命中玩家弱点的“配合”选项显眼标记
+    const weak = !S.scenarioMode && weaknessAppeals(opt, S.weakness);
+    const weakTag = weak ? `<span class="otype opt-weak">戳中🔥</span>` : "";
+    if (weak) b.classList.add("opt-weak-hi");
+    b.innerHTML = `${weakTag}<span class="otype ${t.cls}">${t.label}</span>${opt.text}`;
     b.addEventListener("click", () => chooseOption(opt));
     bar.appendChild(b);
   });
@@ -611,6 +629,17 @@ function detectRedFlagLocal(text) {
 /* ---------------- 选择选项 ---------------- */
 function chooseOption(opt) {
   trackFromChoice(opt);
+  // M3 蝴蝶效应：记录关键抉择（分叉点）
+  if (!S.scenarioMode) {
+    S.choices = S.choices || [];
+    const node = S.story.nodes[S.node];
+    S.choices.push({
+      node: S.node,
+      phase: (node && node.phase) || "",
+      chosen: opt.text,
+      alts: ((node && node.options) || []).filter(o => o !== opt).map(o => o.text),
+    });
+  }
   pushMessageFinal(S.activeConv, "me", opt.text, null);
   if (opt.trust) S.trust = clamp(S.trust + opt.trust, 0, 100);
   if (opt.exposure) S.exposure = clamp(S.exposure + opt.exposure, 0, 4);
@@ -802,6 +831,13 @@ function triggerEnding(endKey) {
   // 记录解锁
   checkUnlockAfterFinish(S.idKey, end.good);
 
+  // M3 结局图鉴：记录已解锁结局
+  if (S.idKey && S.endingKey) {
+    if (!S.unlockedEndings) S.unlockedEndings = {};
+    S.unlockedEndings[S.idKey + ":" + S.endingKey] = true;
+    saveProgress();
+  }
+
   // 坏结局 → 呼吸缓冲后进入第二幕·崩塌
   if (bad) {
     showBreathing({
@@ -891,6 +927,7 @@ function runReplay(end) {
   $("replay-end-text").textContent = end.text;
   $("replay-end-review").innerHTML = `<b>复盘</b>${end.review}`;
   renderTimeline();
+  renderButterfly();   // M3 蝴蝶效应流程图
   show("replay-overlay");
 }
 $("replay-continue").addEventListener("click", () => { hide("replay-overlay"); runShield(); });
@@ -902,6 +939,26 @@ function renderTimeline() {
       <div class="tl-day">第 ${n.day||"?"} 天 · ${n.who}</div>
       <div class="tl-phase">【心理学标注】${n.phase||""}</div>
       <div class="tl-text">${n.text}</div></div>`).join("");
+}
+
+/* M3 蝴蝶效应流程图：可视化每个关键抉择，并标注“如果选 Y 会…” */
+function renderButterfly() {
+  const box = $("butterfly-list");
+  if (!box) return;
+  const choices = (S.choices || []).filter(c => c.alts && c.alts.length > 0);
+  if (!choices.length) {
+    box.innerHTML = `<div class="bf-empty">这一局没有关键分叉点，或你全程选择了唯一路径。</div>`;
+    return;
+  }
+  box.innerHTML = choices.map((c, i) => {
+    const altHtml = c.alts.map(a => `<div class="bf-alt">↪ 如果选「${a}」会走向另一个分支</div>`).join("");
+    return `<div class="bf-node">
+      <div class="bf-idx">分叉 ${i+1}</div>
+      <div class="bf-phase">【${c.phase || "抉择"}】</div>
+      <div class="bf-chosen">✅ 你选了：${c.chosen}</div>
+      ${altHtml}
+    </div>`;
+  }).join('<div class="bf-arrow">↓</div>');
 }
 
 /* ---------------- 第四幕·平行宇宙输入框 ---------------- */
@@ -980,11 +1037,156 @@ $("profile-close").addEventListener("click", () => hide("profile-overlay"));
 /* ---------------- 退出 / 重开 ---------------- */
 function hideAll() {
   ["idselect-overlay","identity-overlay","ruins-overlay","replay-overlay","parallel-overlay",
-   "shield-overlay","toolbox-overlay","convlist-overlay","task-overlay","status-overlay","profile-overlay"].forEach(hide);
+   "shield-overlay","toolbox-overlay","convlist-overlay","task-overlay","status-overlay","profile-overlay",
+   "scenario-picker-overlay","scenario-result-overlay","ending-gallery-overlay"].forEach(hide);
 }
 $("btn-exit").addEventListener("click", () => {
-  if (confirm("退出当前任务？进度不会保存。")) { hideAll(); $("game-root").classList.add("hidden"); showIdentitySelect(); }
+  if (confirm("退出当前任务？进度不会保存。")) {
+    hideAll();
+    $("game-root").classList.add("hidden");
+    if (S.scenarioMode) { S.scenarioMode = false; openScenarioPicker(); }
+    else showIdentitySelect();
+  }
 });
+
+/* ---------------- 单人反诈演练（M2 十类独立场景） ---------------- */
+function openScenarioPicker() {
+  const box = $("scenario-picker-list");
+  box.innerHTML = "";
+  SCENARIO_LIST.forEach(key => {
+    const t = SCAM_TYPES[key];
+    const sc = SCENARIOS[key];
+    const row = document.createElement("div");
+    row.className = "idopt";
+    row.innerHTML = `
+      <div class="idopt-av" style="background:#2a3a5a">${t.emoji}</div>
+      <div class="idopt-mid">
+        <div class="idopt-name">${t.emoji} ${t.name}</div>
+        <div class="idopt-ms">${sc.scene}</div>
+      </div>`;
+    row.addEventListener("click", () => { hide("scenario-picker-overlay"); startScenario(key); });
+    box.appendChild(row);
+  });
+  show("scenario-picker-overlay");
+}
+$("scenario-picker-close").addEventListener("click", () => { hide("scenario-picker-overlay"); $("warn-screen").style.display = "flex"; });
+$("warn-drill").addEventListener("click", () => { hide("warn-screen"); openScenarioPicker(); });
+
+function startScenario(key) {
+  const sc = SCENARIOS[key];
+  if (!sc) return;
+  S.scenarioMode = true;
+  S.idKey = null;
+  S.scenarioKey = key;
+  S.scenarioType = sc.typeKey;
+  S.redflags = {};
+  S.scenarioNode = sc.start;
+  S.history = [];
+  S.convs = { scammer: { unread: false, messages: [] } };
+  S.activeConv = "scammer";
+  S.story = { scene: sc.title, actors: ["scammer"], tasks: [], endings: {} };
+  $("game-root").classList.remove("hidden");
+  $("stage-scene").textContent = sc.scene;
+  $("btn-exit").classList.remove("hidden");
+  $("top-codename").textContent = "🎯 单人演练";
+  $("top-day").textContent = "";
+  $("top-task").textContent = "🎯 " + SCAM_TYPES[sc.typeKey].name;
+  $("act-badge").textContent = "🎯 反诈演练";
+  $("act-sub").textContent = "识别红标，别踩坑";
+  const suspWrap = $("susp-wrap"); if (suspWrap) suspWrap.classList.add("hidden");
+  applyActTheme("hope");
+  playScenario(sc.start);
+}
+
+function playScenario(nodeId) {
+  const sc = SCENARIOS[S.scenarioKey];
+  const node = sc.nodes[nodeId];
+  if (!node) { finishScenario(); return; }
+  S.scenarioNode = nodeId;
+  const spk = node.speaker || "scammer";
+  showTyping();
+  setTimeout(() => {
+    hideTyping();
+    typeWriter(spk, node.text, node.phase || "", () => {
+      S.history.push({ who: "骗子", phase: node.phase, text: node.text });
+      renderScenarioOptions(node);
+    });
+  }, 450);
+}
+
+function renderScenarioOptions(node) {
+  const bar = $("options-bar");
+  bar.innerHTML = "";
+  (node.options || []).forEach(opt => {
+    const b = document.createElement("button");
+    b.className = "opt-btn";
+    const t = TONE[opt.tone] || TONE.neutral;
+    const tag = opt.redflag
+      ? `<span class="otype opt-bad">坑</span>`
+      : `<span class="otype opt-good">稳</span>`;
+    b.innerHTML = `${tag}<span class="otype ${t.cls}">${t.label}</span>${opt.text}`;
+    b.addEventListener("click", () => chooseScenarioOption(opt));
+    bar.appendChild(b);
+  });
+}
+
+function chooseScenarioOption(opt) {
+  pushMessageFinal(S.activeConv, "me", opt.text, null);
+  if (opt.redflag) trackRedflag(opt.redflag);
+  $("options-bar").innerHTML = "";
+  if (opt.next && SCENARIOS[S.scenarioKey].nodes[opt.next]) {
+    setTimeout(() => playScenario(opt.next), 350);
+  } else {
+    setTimeout(() => finishScenario(), 500);
+  }
+}
+
+function finishScenario() {
+  const sc = SCENARIOS[S.scenarioKey];
+  const t = SCAM_TYPES[sc.typeKey];
+  $("game-root").classList.add("hidden");
+  $("scen-result-hd").textContent = "演练复盘 · " + t.name;
+  $("scen-result-debrief").textContent = sc.debrief;
+  $("pitfall-report-scen").innerHTML = buildPitfallReportHTML("pitfall-scen");
+  const ps = $("pitfall-scen-share");
+  if (ps) ps.addEventListener("click", shareReportImage);
+  show("scenario-result-overlay");
+}
+$("scen-replay-btn").addEventListener("click", () => { hide("scenario-result-overlay"); startScenario(S.scenarioKey); });
+$("scen-back-btn").addEventListener("click", () => { hide("scenario-result-overlay"); openScenarioPicker(); });
+
+/* ---------------- M3 结局图鉴（6 身份 × 各自结局矩阵） ---------------- */
+function renderEndingGallery() {
+  const box = $("ending-gallery-list");
+  if (!box) return;
+  let html = "";
+  Object.keys(IDENTITIES).forEach(idKey => {
+    const id = IDENTITIES[idKey];
+    const story = STORIES[idKey];
+    const endings = story && story.endings ? Object.keys(story.endings) : [];
+    const unlockedCount = endings.filter(ek => S.unlockedEndings && S.unlockedEndings[idKey + ":" + ek]).length;
+    const cells = endings.map(ek => {
+      const e = story.endings[ek];
+      const unlocked = S.unlockedEndings && S.unlockedEndings[idKey + ":" + ek];
+      if (unlocked) {
+        return `<div class="eg-cell ${e.good ? "good" : "bad"}">
+          <div class="eg-t">${e.title}</div>
+          <div class="eg-r">${e.review}</div></div>`;
+      }
+      return `<div class="eg-cell locked"><div class="eg-lock">🔒 ???</div></div>`;
+    }).join("");
+    html += `<div class="eg-id">
+      <div class="eg-id-h"><span class="eg-av" style="background:${id.color}">${id.avatar}</span>
+        ${id.codename} · ${id.role}
+        <span class="eg-count">${unlockedCount}/${endings.length}</span></div>
+      <div class="eg-cells">${cells}</div></div>`;
+  });
+  box.innerHTML = html;
+  show("ending-gallery-overlay");
+}
+$("ending-gallery-close").addEventListener("click", () => hide("ending-gallery-overlay"));
+$("shield-gallery-btn").addEventListener("click", renderEndingGallery);
+$("warn-gallery-btn").addEventListener("click", renderEndingGallery);
 
 /* ---------------- 启动：先尝试恢复进度 ---------------- */
 loadProgress();
