@@ -1,6 +1,10 @@
 # 反诈人生
 
+> **V9.0** · 一个用沉浸式叙事帮 Z 世代识别和防范电信网络诈骗的 Web 应用。
+> 五幕剧情 + 十大诈骗实战 + 安全护栏 + 心理弱点 / 蝴蝶效应 / 证据墙 + 快速模式 + 小程序 / H5 适配 / 语音播报 / 匿名数据埋点。
+
 腾讯黑客松比赛项目 —— 一个帮助用户识别和防范电信网络诈骗的 Web 应用。
+面向用户版更新说明见 [`RELEASE_NOTES_V9.md`](./RELEASE_NOTES_V9.md)。
 
 项目详细文档（部署、风险管理等）见 [`docs/`](./docs/) 目录：
 
@@ -13,7 +17,7 @@
 - **公网访问地址**：https://ai-d9gd4xji5de241243-1453144747.tcloudbaseapp.com/
 - **CloudBase 环境 ID**：`ai-d9gd4xji5de241243`（上海，体验版）
 - **部署方式**：纯前端静态托管（`frontend/` 为单页应用，无后端依赖、无构建步骤）
-  - **V8.0（当前线上）**：`index8.html` + `data8.js`（身份/任务/多角色剧本/五幕）+ `app8.js`（五幕引擎逻辑）
+  - **V9.0（当前线上）**：`index8.html` + `data8.js`（身份/任务/多角色剧本/五幕）+ `app8.js`（五幕引擎逻辑）+ M1–M5 模块（`analytics.js` / `voice.js` / `adapter.js` / `scenarios.js` / `evidence.js` / `quickMode.js` / `weakness.js` / `report.js`）
   - V7.0（旧版备份）：`index.html` + `data7.js` + `app7.js`（未被 `index8.html` 引用，保留存档）
   - V5.0（旧版备份）：`data.js` + `app.js` + `script.js` + `style.css`（保留存档）
 - **重新部署**：在已登录 CloudBase MCP 后，执行
