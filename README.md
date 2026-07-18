@@ -56,7 +56,7 @@
 ### 2. 数据埋点（`frontend/analytics.js` + 后端 `POST /api/track`）
 - **隐私优先**：仅采集匿名聚合事件（如 `game_start` / `scenario_start` / `ending_reached` / `redflag_hit` / `report_view` / `quickmode_finish`），**绝不记录姓名、手机号、聊天原文**，事件属性超长自动截断。
 - 事件先入本地缓冲，按节流（6s）或在页面隐藏（`visibilitychange` / `pagehide`）时批量上报，使用 `fetch(..., { keepalive: true })`。
-- 后端 `backend/src/controllers/analyticsController.js` **仅做计数聚合**（`byName` 计数 + 会话数），不落盘事件原文，仅写入聚合计数日志，便于评估教育效果而不留存 PII。
+- 后端 `backend/src/controllers/analyticsController.js` **仅做计数聚合**（`byName` 计数 + 会话数 + 按日趋势），不落盘事件原文；聚合结果持久化到 `backend/data/analytics.json`（进程重启不丢失），便于评估教育效果而不留存 PII。
 - 本地无后端时静默降级，不影响游戏运行。可通过环境变量 `ANALYTICS_ENABLED=false` 关闭。
 - 聚合统计接口：`GET /api/track/stats`（运维观测）。
 
@@ -64,3 +64,11 @@
 - 使用浏览器内置 **Web Speech API（SpeechSynthesis）** 朗读「骗子 / AI」消息（中文 `zh-CN`），零外部依赖、零网络请求。
 - 顶栏新增 🔊 语音开关，状态持久化；不支持的浏览器自动降级为 no-op。长文本自动截断，避免朗读过长。
 - 快速模式卡片话术同样支持朗读。
+
+### 4. 数据看板（离线自包含，`frontend/dashboard.html`）
+埋点数据可视化出口，让 M5 度量能力闭环可用：
+- **生成**：`node scripts/genDashboard.js`（读取 `backend/data/analytics.json` 最新聚合）→ 输出 `frontend/dashboard.html`（**内嵌数据，双击即可离线查看**，无需后端）。
+- **先看效果**：`node scripts/genDashboard.js --sample` 用内置演示数据生成看板。
+- **实时模式**：若由后端同源托管（如 CloudBase 静态托管 + 同域 API），看板会自动 `fetch('/api/track/stats')` 拉取实时数据；离线双击则展示内嵌快照。
+- 看板内容：独立会话数 / 事件总量 / 事件类型数 / 追踪天数 四张摘要卡 + 事件分布 Top12 条形图 + 每日趋势 SVG 柱状图 + 事件明细表；全程不展示任何个人信息。
+- 隐私承诺：看板只渲染匿名聚合计数，不含聊天原文、姓名、手机号等 PII。
