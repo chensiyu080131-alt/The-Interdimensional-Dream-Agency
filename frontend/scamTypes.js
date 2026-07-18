@@ -112,7 +112,7 @@ const SCAM_TYPES = {
   /* 5. 虚假投资理财 */
   fake_invest: {
     id: "fake_invest", name: "虚假投资理财", alias: "内部消息盘", emoji: "📈",
-    redFlags: ["rf_high_return", "rf_transfer", "rf_deepen"],
+    redFlags: ["rf_high_return", "rf_transfer", "rf_deepen", "rf_relax"],
     tip: "非官方渠道的‘量化/外汇/币圈’高收益，本质是后台可改的假盘。",
     keywords: ["量化", "稳赚", "导师带单", "内部通道", "提现门槛"],
     youngExample: "程序员老周被拉进‘内部操盘群’，‘老师’带单外汇，前期小赚可提现，加码到 30 万后平台‘维护’，群解散。",
@@ -126,7 +126,7 @@ const SCAM_TYPES = {
   /* 6. 虚假征信 */
   fake_credit: {
     id: "fake_credit", name: "虚假征信", alias: "注销校园贷", emoji: "💳",
-    redFlags: ["rf_obey", "rf_transfer", "rf_info"],
+    redFlags: ["rf_obey", "rf_transfer", "rf_info", "rf_relax"],
     tip: "征信无法‘人为注销/修复’，凡索要验证码、让你转账‘清空额度’的都是诈骗。",
     keywords: ["校园贷", "影响征信", "注销账户", "清空额度", "网贷"],
     youngExample: "应届生小萌接到‘银监会客服’：‘你大学注册的网贷需注销，否则影响征信’。按其要求在各平台借款 4 万‘清空额度’转入指定账户，石沉大海。",
