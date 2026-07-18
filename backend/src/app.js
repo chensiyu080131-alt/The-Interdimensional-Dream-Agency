@@ -24,9 +24,26 @@ const app = express();
 /* ------------------------------------------------------------
  * 中间件
  * ---------------------------------------------------------- */
-app.use(cors());
+// CORS：按配置限制来源（默认 * 仅开发用），支持逗号分隔白名单
+const corsOrigin = config.auth?.corsOrigin || "*";
+app.use(cors({
+  origin: corsOrigin === "*" ? true : corsOrigin.split(",").map(s => s.trim()),
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+/* ------------------------------------------------------------
+ * M1.4 统一入口鉴权（仅在配置了 API_ACCESS_TOKEN 时启用）
+ *   小程序 / H5 通过统一入口在请求头携带 X-Access-Token
+ *   未配置 token 时放开（保持本地开发与现有部署不受影响）
+ * ---------------------------------------------------------- */
+app.use("/api", (req, res, next) => {
+  const required = config.auth?.accessToken || "";
+  if (!required) return next(); // 未配置则不校验
+  const provided = req.headers["x-access-token"] || req.query.access_token || "";
+  if (provided === required) return next();
+  return res.status(401).json({ success: false, error: "未授权：缺少或无效的访问令牌" });
+});
 
 // 请求日志（开发环境）
 if (process.env.NODE_ENV !== "production") {

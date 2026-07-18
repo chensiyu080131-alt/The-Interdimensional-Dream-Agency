@@ -5,5 +5,8 @@ backend/node_modules/
 .env
 *.log
 
+# 对话审计日志（含玩家输入，不入库）
+backend/logs/
+
 # 系统文件
 .DS_Store

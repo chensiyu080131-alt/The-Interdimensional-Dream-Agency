@@ -13,7 +13,28 @@
 const hunyuanService = require("../services/hunyuanService");
 const taskDetector = require("../services/taskDetector");
 const endingService = require("../services/endingService");
+const safetyGuard = require("../services/safetyGuard");
 const config = require("../config");
+
+/* ================================================================
+ * 身份 → 兜底角色类型映射（安全护栏取兜底回复用）
+ * ================================================================ */
+const IDENTITY_ROLE_TYPE = {
+  hunter: "scammer",
+  journalist: "scammer",
+  mole: "scammer",
+  lighthouse: "victim",
+  seeker: "informant",
+  floating: "normal",
+};
+function roleTypeOf(identity, conversationId) {
+  if (conversationId) {
+    if (conversationId === "xiaoya") return "victim";
+    if (conversationId === "laok" || conversationId === "anon" || conversationId === "anonymous") return "informant";
+    if (conversationId === "zhanghao") return "scammer";
+  }
+  return IDENTITY_ROLE_TYPE[identity] || "default";
+}
 
 /* ================================================================
  * 身份 → 目标角色映射
@@ -534,9 +555,32 @@ async function handleChat(req, res) {
 
     const trimmedMessage = message.trim();
     const gameState = { identity, conversationId, currentDay, trustValue, tasks, lastNode };
+    const roleType = roleTypeOf(identity, conversationId);
 
-    // ===== 2. 构建 System Prompt =====
-    const systemPrompt = buildSystemPrompt(gameState);
+    // ===== 1.5 安全护栏 · 玩家输入越界检测（越狱 / 隐私 / 诱导反向教学） =====
+    const inputCheck = safetyGuard.checkInput(trimmedMessage);
+    if (inputCheck.blocked) {
+      const safeReply = safetyGuard.getSafeReply(roleType);
+      safetyGuard.auditLog({
+        identity, conversationId, input: trimmedMessage, output: safeReply,
+        inputCheck, outputCheck: null, aiGenerated: false,
+      });
+      return res.json({
+        success: true,
+        reply: safeReply,
+        conversationId,
+        psychologyTag: "安全护栏·输入越界拦截",
+        trustDelta: 0,
+        taskUpdate: null,
+        nextScene: null,
+        isEnding: false,
+        endingPrediction: null,
+        meta: { identity, conversationId, currentDay, aiGenerated: false, model: "safety-fallback", safety: inputCheck.reason },
+      });
+    }
+
+    // ===== 2. 构建 System Prompt（追加安全强约束后缀） =====
+    const systemPrompt = safetyGuard.applySafetySuffix(buildSystemPrompt(gameState));
 
     // ===== 3. 构建 messages 数组 =====
     const messages = [{ role: "system", content: systemPrompt }];
@@ -568,6 +612,19 @@ async function handleChat(req, res) {
     if (!reply) {
       reply = getFallbackReply(identity, gameState);
     }
+
+    // ===== 5.5 安全护栏 · AI 输出越界检测（真实作案细节 / 链接 / 联系方式） =====
+    const outputCheck = safetyGuard.checkOutput(reply);
+    if (outputCheck.violated) {
+      // 命中越界：丢弃 AI 内容，替换为安全兜底回复，绝不透出违规内容
+      reply = safetyGuard.getSafeReply(roleType);
+      aiOk = false;
+    }
+    // 审计日志（供每日人工抽检）
+    safetyGuard.auditLog({
+      identity, conversationId, input: trimmedMessage, output: reply,
+      inputCheck, outputCheck, aiGenerated: aiOk,
+    });
 
     // ===== 6. 解析 AI 回复 =====
     const psychologyTag = analyzePsychologyTag(reply, gameState);

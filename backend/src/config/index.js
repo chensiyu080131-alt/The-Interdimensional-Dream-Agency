@@ -20,6 +20,17 @@ module.exports = {
     maxTokens: parseInt(process.env.AI_MAX_TOKENS, 10) || 500,
   },
 
+  // 统一入口鉴权（小程序 / H5 共用，M1.4）
+  auth: {
+    accessToken: process.env.API_ACCESS_TOKEN || "",
+    corsOrigin: process.env.CORS_ORIGIN || "*",
+  },
+
+  // 内容安全护栏（M1.1）
+  safety: {
+    auditEnabled: (process.env.SAFETY_AUDIT_ENABLED || "true") !== "false",
+  },
+
   // API Key 有效性检查
   isApiKeyValid() {
     const key = this.hunyuan.apiKey;

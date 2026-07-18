@@ -733,6 +733,28 @@ function showTyping() {
 }
 function hideTyping() { const t = $("typing-msg"); if (t) t.remove(); }
 
+/* ---------------- M1.3 呼吸环节（幕间情绪缓冲） ---------------- */
+function showBreathing({ title, text, onContinue }) {
+  $("breath-title").textContent = title || "停一下，深呼吸";
+  $("breath-text").textContent = text || "吸气……4 秒。屏住……2 秒。呼气……6 秒。";
+  const scr = $("breath-screen");
+  scr.classList.add("show");
+  const cont = $("breath-continue");
+  // 用克隆替换以清除旧监听，避免重复绑定
+  const fresh = cont.cloneNode(true);
+  cont.parentNode.replaceChild(fresh, cont);
+  fresh.addEventListener("click", () => {
+    scr.classList.remove("show");
+    if (typeof onContinue === "function") onContinue();
+  });
+}
+$("breath-exit").addEventListener("click", () => {
+  if (confirm("退出当前任务？进度不会保存。")) {
+    $("breath-screen").classList.remove("show");
+    hideAll(); $("game-root").classList.add("hidden"); showIdentitySelect();
+  }
+});
+
 /* ---------------- Toast ---------------- */
 let toastTimer = null;
 function toast(text) {
@@ -778,8 +800,15 @@ function triggerEnding(endKey) {
   // 记录解锁
   checkUnlockAfterFinish(S.idKey, end.good);
 
-  // 坏结局 → 第二幕·崩塌
-  if (bad) { runCollapse(end); return; }
+  // 坏结局 → 呼吸缓冲后进入第二幕·崩塌
+  if (bad) {
+    showBreathing({
+      title: "接下来会有点沉重",
+      text: "你即将看到选择带来的后果。记住——这只是模拟，你随时可以退出。准备好了再继续。",
+      onContinue: () => runCollapse(end),
+    });
+    return;
+  }
   // 好结局 → 直接第四幕回放（跳过崩塌）
   runReplay(end);
 }
@@ -841,7 +870,14 @@ function runRuins(end) {
       }
     });
   });
-  $("ruins-continue").onclick = () => runReplay(end);
+  $("ruins-continue").onclick = () => {
+    hide("ruins-overlay");
+    showBreathing({
+      title: "深呼吸，回到当下",
+      text: "刚才的一切已经过去。接下来我们一起回看这段经历，看看哪里本可以不一样。你是安全的。",
+      onContinue: () => runReplay(end),
+    });
+  };
   show("ruins-overlay");
 }
 $("ruins-close").addEventListener("click", () => hide("ruins-overlay"));
