@@ -31,6 +31,11 @@ module.exports = {
     auditEnabled: (process.env.SAFETY_AUDIT_ENABLED || "true") !== "false",
   },
 
+  // M5 数据埋点（仅聚合计数，不存储原文；前端默认开启，可设 false 关闭）
+  analytics: {
+    enabled: (process.env.ANALYTICS_ENABLED || "true") !== "false",
+  },
+
   // API Key 有效性检查
   isApiKeyValid() {
     const key = this.hunyuan.apiKey;

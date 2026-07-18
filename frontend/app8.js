@@ -7,10 +7,19 @@
 const API_BASE = window.location.hostname === "localhost"
   ? "http://localhost:3000"
   : "https://ai-d9gd4xji5de241243-1453144747.tcloudbaseapp.com/api";
+/* M5 数据埋点上报地址（与 API_BASE 同源部署；本地无后端时静默降级） */
+const ANALYTICS_ENDPOINT = window.location.hostname === "localhost"
+  ? "http://localhost:3000/api/track"
+  : "https://ai-d9gd4xji5de241243-1453144747.tcloudbaseapp.com/api/track";
 const API_ENABLED = true; // 开关：是否启用 AI API（关掉则回退到预设话术）
 const API_TIMEOUT = 30000; // 30 秒超时
 // 保存上一次请求参数，用于重试
 let _lastRequest = null;
+
+/* M5 语音：仅朗读「骗子/AI」消息（who === "ai"），玩家自己的消息不读 */
+function maybeSpeak(who, text) {
+  if (who === "ai" && text) Voice.speak(text);
+}
 
 /* ---------------- 状态 ---------------- */
 const S = {
@@ -145,6 +154,11 @@ function startGame() {
   $("game-root").classList.remove("hidden");
   $("stage-scene").textContent = S.story.scene;
   $("btn-exit").classList.remove("hidden");
+  $("btn-voice").classList.remove("hidden"); // M5 语音开关
+  // M5 数据埋点
+  Analytics.track("game_start", { identity: S.idKey });
+  // M5 H5 适配：微信内打开时善意提示
+  if (H5Adapter.isWeChat() && !H5Adapter.inMiniProgram) toast("💡 微信内打开，建议用浏览器获得完整体验");
   // 显示 AI 模式指示器
   if (API_ENABLED) {
     const aiStatus = $("ai-status");
@@ -168,6 +182,8 @@ function applyActTheme(actKey) {
   $("act-badge").textContent = `第 ${a.n} 幕 · ${a.name}`;
   $("act-badge").style.color = a.accent;
   $("act-sub").textContent = a.sub;
+  // M5 数据埋点：幕切换
+  Analytics.track("act_change", { act: actKey });
 }
 
 /* ---------------- 顶部状态栏 ---------------- */
@@ -250,6 +266,7 @@ function playNode(nodeId) {
   setTimeout(() => {
     hideTyping();
     typeWriter(spk, node.text, node.phase, () => {
+      maybeSpeak("ai", node.text); // M5 语音：朗读骗子/AI 节点
       S.history.push({ day: node.day, who: ACTORS[spk].name, phase: node.phase, text: node.text });
       updateTopbar();
       // M3 内心戏旁白：grooming 阶段、命中玩家弱点的节点注入第二人称浮层
@@ -632,6 +649,8 @@ function detectRedFlagLocal(text) {
 /* ---------------- 选择选项 ---------------- */
 function chooseOption(opt) {
   trackFromChoice(opt);
+  // M5 数据埋点
+  Analytics.track("option_choose", { tone: opt.tone, redflag: !!opt.redflag });
   // M3 蝴蝶效应：记录关键抉择（分叉点）
   if (!S.scenarioMode) {
     S.choices = S.choices || [];
@@ -749,6 +768,7 @@ function renderProfile() {
 function pushMessageFinal(convKey, who, text, phase) {
   S.convs[convKey].messages.push({ who, text, psy: phase });
   if (convKey === S.activeConv) appendBubble(who, text, phase, true);
+  maybeSpeak(who, text); // M5 语音：朗读 AI 回复（玩家消息 who="me" 不会读）
 }
 function appendBubble(who, text, phase, scroll) {
   const area = $("chat-area");
@@ -828,6 +848,8 @@ function determineEnding(story, state) {
 function triggerEnding(endKey) {
   S.ending = true; S.endingKey = endKey;
   $("options-bar").innerHTML = "";
+  // M5 数据埋点
+  Analytics.track("ending_reached", { ending: endKey, good: end.good });
   const end = S.story.endings[endKey];
   const bad = !end.good;
   if (bad) { $("phone").classList.add("shake"); setTimeout(()=>$("phone").classList.remove("shake"), 500); }
@@ -1013,6 +1035,8 @@ function runShield() {
   renderToolbox();
   // M2 避坑报告生成器
   $("pitfall-report").innerHTML = buildPitfallReportHTML();
+  // M5 数据埋点
+  Analytics.track("report_view", { mode: "main" });
   const ps = $("pitfall-share");
   if (ps) ps.addEventListener("click", shareReportImage);
   show("shield-overlay");
@@ -1130,6 +1154,8 @@ function startScenario(key) {
   const suspWrap = $("susp-wrap"); if (suspWrap) suspWrap.classList.add("hidden");
   applyActTheme("hope");
   updateEvidenceBadge();
+  $("btn-voice").classList.remove("hidden"); // M5 语音开关
+  Analytics.track("scenario_start", { type: S.scenarioType }); // M5 埋点
   playScenario(sc.start);
 }
 
@@ -1190,6 +1216,8 @@ function renderScenarioOptions(node) {
 function chooseScenarioOption(opt) {
   pushMessageFinal(S.activeConv, "me", opt.text, null);
   if (opt.redflag) trackRedflag(opt.redflag);
+  // M5 数据埋点
+  Analytics.track("scenario_option", { redflag: !!opt.redflag });
   // M4.1 记录最终抉择是否谨慎
   S.lastScenarioCautious = (opt.tone === "cautious");
   // M4.4 转账冷灰+震动：踩到“转账要求”红标时触发
@@ -1224,6 +1252,9 @@ function finishScenario() {
   $("pitfall-report-scen").innerHTML = buildPitfallReportHTML("pitfall-scen");
   const ps = $("pitfall-scen-share");
   if (ps) ps.addEventListener("click", shareReportImage);
+  // M5 数据埋点
+  Analytics.track("scenario_finish", { type: sc.typeKey, cautious: S.lastScenarioCautious });
+  Analytics.track("report_view", { mode: "scenario" });
   show("scenario-result-overlay");
 }
 $("scen-replay-btn").addEventListener("click", () => { hide("scenario-result-overlay"); startScenario(S.scenarioKey); });
@@ -1271,8 +1302,32 @@ $("ending-gallery-close").addEventListener("click", () => hide("ending-gallery-o
 $("shield-gallery-btn").addEventListener("click", renderEndingGallery);
 $("warn-gallery-btn").addEventListener("click", renderEndingGallery);
 
+/* ---------------- M5 语音开关（顶栏 🔊 按钮） ---------------- */
+function bindVoiceToggle() {
+  const btn = $("btn-voice");
+  if (!btn) return;
+  const sync = () => {
+    const on = Voice.isEnabled();
+    btn.textContent = on ? "🔊" : "🔈";
+    btn.classList.toggle("voice-on", on);
+  };
+  sync();
+  btn.addEventListener("click", () => {
+    const on = Voice.toggle();
+    sync();
+    if (on) toast("🔊 语音播报已开启");
+    else { Voice.stop(); toast("🔇 语音已关闭"); }
+  });
+}
+
 /* ---------------- 启动：先尝试恢复进度 ---------------- */
 loadProgress();
+
+/* ---------------- M5 初始化：H5 适配 / 语音 / 数据埋点 ---------------- */
+H5Adapter.init();
+Voice.init();
+Analytics.init({ endpoint: ANALYTICS_ENDPOINT, token: "" });
+bindVoiceToggle();
 
 /* ---------------- 暴露全局函数（HTML onclick 调用） ---------------- */
 window.retryLastRequest = retryLastRequest;

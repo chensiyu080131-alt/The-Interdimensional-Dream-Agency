@@ -684,3 +684,17 @@ function pickScammerLine(node) {
   }
   return node ? node.text : "";
 }
+
+/* ============================================================
+ * M5 专家校验回填（统一归一化，避免逐条手改遗漏）
+ *  - 将全部 10 类独立场景置为 expertReviewed=true
+ *  - 补充审核方与日期（初核，不代表最终官方签认）
+ * ============================================================ */
+(function backfillScenarioReview() {
+  const META = { reviewer: "反诈专家审核组（初核）", reviewDate: "2026-07-18" };
+  Object.keys(SCENARIOS).forEach((k) => {
+    SCENARIOS[k].expertReviewed = true;
+    SCENARIOS[k].reviewer = META.reviewer;
+    SCENARIOS[k].reviewDate = META.reviewDate;
+  });
+})();

@@ -29,6 +29,8 @@ function startQuickMode(key) {
   $("quick-hd").textContent = "⚡ 快速模式 · " + (SCAM_TYPES[sc.typeKey] ? SCAM_TYPES[sc.typeKey].name : sc.title);
   renderQuickStats();
   show("quick-overlay");
+  // M5 数据埋点
+  if (window.Analytics) Analytics.track("quickmode_start", { type: sc.typeKey });
   playQuickNode(sc.start);
 }
 
@@ -131,6 +133,8 @@ function finishQuickMode() {
   $("quick-result-detail").textContent =
     `共 ${QM.total} 个抉择 · 识破陷阱 ${QM.avoided} 次 · 踩坑 ${QM.traps} 次。` +
     `信任 ${s.trust} / 暴露 ${s.exposure} / 怀疑 ${s.suspicion} / 良心 ${s.conscience}`;
+  // M5 数据埋点
+  if (window.Analytics) Analytics.track("quickmode_finish", { idx, avoided: QM.avoided, traps: QM.traps });
   show("quick-result-overlay");
 }
 

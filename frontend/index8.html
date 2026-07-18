@@ -96,6 +96,8 @@
     .xiaoya-fill{height:100%;width:0;background:linear-gradient(90deg,#F0A020,#FFD700);transition:width .4s;}
     .xiaoya-label{font-size:11px;font-weight:700;color:#F0A020;white-space:nowrap;}
     .exit-btn{background:none;border:1px solid rgba(255,255,255,.2);color:#ff9b9b;border-radius:12px;padding:3px 10px;font-size:12px;cursor:pointer;}
+    /* M5 语音开关：开启状态高亮 */
+    #btn-voice.voice-on{background:rgba(7,193,96,.22);border-color:#07C160;color:#7fe0ab;}
 
     /* 场景条 */
     .scene-bar{flex:0 0 auto;padding:8px 14px;font-size:12px;color:var(--tx2);font-style:italic;transition:background .4s;}
@@ -425,7 +427,7 @@
       <div class="topbar">
         <div class="top-line1">
           <div><span class="cn" id="top-codename">猎鹰</span> · <span id="top-day">第 1 天</span></div>
-        <div style="text-align:right"><span class="act-badge" id="act-badge">第 1 幕 · 希望</span><br/><span class="act-sub" id="act-sub" style="font-size:10px;color:var(--tx2)"></span><br/><button class="exit-btn hidden" id="btn-exit" style="margin-top:3px">退出</button></div>
+        <div style="text-align:right"><span class="act-badge" id="act-badge">第 1 幕 · 希望</span><br/><span class="act-sub" id="act-sub" style="font-size:10px;color:var(--tx2)"></span><br/><button class="exit-btn hidden" id="btn-voice" style="margin-top:3px;margin-right:6px" title="语音播报">🔈</button><button class="exit-btn hidden" id="btn-exit" style="margin-top:3px">退出</button></div>
       </div>
       <div class="top-task" id="top-task">🎯 —</div>
       <button class="ev-badge hidden" id="evidence-badge" style="display:none">📎 证据 0/0</button>
@@ -713,6 +715,10 @@
   <script src="evidence.js"></script>
   <script src="quickMode.js"></script>
   <script src="weakness.js"></script>
+  <!-- M5：数据埋点 / 语音 / H5·小程序适配（须先于 app8.js 加载） -->
+  <script src="analytics.js"></script>
+  <script src="voice.js"></script>
+  <script src="adapter.js"></script>
   <script src="app8.js"></script>
 </body>
 </html>

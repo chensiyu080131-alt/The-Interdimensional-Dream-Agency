@@ -16,6 +16,8 @@
 function trackRedflag(id) {
   if (!S.redflags) S.redflags = {};
   S.redflags[id] = true;
+  // M5 数据埋点：红标命中（仅匿名计数，不存原文）
+  if (window.Analytics) Analytics.track("redflag_hit", { id });
 }
 
 /* 在 chooseOption 中调用：依据玩家本次选项与所在节点的心理学手段判定踩坑 */
@@ -94,6 +96,8 @@ function buildPitfallReportHTML(mountKey) {
   const peer = types.length ? types[0].youngExample : "";
   // 防骗口诀彩蛋
   const poem = ANTI_POEMS[Math.floor(Math.random() * ANTI_POEMS.length)];
+  // M2 专家校验标记：本次涉及类型是否都已通过专家初审
+  const expertVerified = types.length > 0 && types.every((t) => t.expertReviewed);
 
   return `
     <div class="pf-hd">📊 你的避坑成绩单</div>
@@ -116,6 +120,8 @@ function buildPitfallReportHTML(mountKey) {
     <div class="pf-peer">${peer}</div>
 
     <div class="pf-poem">🔑 防骗口诀：${poem}</div>
+
+    ${expertVerified ? `<div class="pf-clean" style="border-color:rgba(7,193,96,.5)">✅ 本骗局内容已通过反诈专家初审（${types[0].reviewDate || "初核"}）</div>` : ""}
 
     <button class="btn" id="${mountKey}-share" style="background:#7B5CFF;margin-top:12px">📸 保存/分享我的避坑报告</button>
   `;

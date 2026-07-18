@@ -58,9 +58,11 @@ if (process.env.NODE_ENV !== "production") {
  * ---------------------------------------------------------- */
 const chatRouter = require("./routes/chat");
 const endingRouter = require("./routes/ending");
+const analyticsRouter = require("./routes/analytics"); // M5 数据埋点接收端
 
 app.use("/api/chat", chatRouter);
 app.use("/api/ending", endingRouter);
+app.use("/api/track", analyticsRouter);
 
 // 根路径健康检查
 app.get("/", (req, res) => {

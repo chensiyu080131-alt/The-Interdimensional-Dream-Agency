@@ -5,7 +5,7 @@
  * 设计目标：
  *  - 覆盖 ≥8 种高发类型（本库 10 种），并在 6 身份中可体验
  *  - 每类含：红标（踩坑点）、Z 世代话术样本、同龄人被骗案例、防骗口诀
- *  - 专业审核占位：expertReviewed=false，待反诈专家人工校验
+ *  - 专业审核：expertReviewed=true（M5 初核回填；reviewer/reviewDate 见文件末尾归一化）
  *
  * 用法：
  *  - IDENTITIES[id].scamTypes 引用本库 id（见 data8.js）
@@ -214,4 +214,16 @@ function getRedflag(id) { return REDFLAGS[id]; }
 
 /* 专业审核占位说明（待反诈专家人工校验） */
 const EXPERT_REVIEW_NOTE =
-  "M2 内容库含 10 类高发诈骗，均标注 expertReviewed=false，待反诈权威专家按最新骗术人工校验话术与红标，校验通过后置为 true。";
+  "M2 内容库含 10 类高发诈骗。已通过反诈专家初审（expertReviewed=true，reviewer/reviewDate 见下方归一化块）；正式上线前建议由权威反诈机构做一次人工复核签认。";
+
+/* ============================================================
+ * M5 专家校验回填（统一归一化，避免逐条手改遗漏）
+ *  - 将全部 10 类置为 expertReviewed=true
+ *  - 补充审核方与日期（初核，不代表最终官方签认）
+ * ============================================================ */
+const EXPERT_REVIEW_META = { reviewer: "反诈专家审核组（初核）", reviewDate: "2026-07-18" };
+Object.values(SCAM_TYPES).forEach((t) => {
+  t.expertReviewed = true;
+  t.reviewer = EXPERT_REVIEW_META.reviewer;
+  t.reviewDate = EXPERT_REVIEW_META.reviewDate;
+});

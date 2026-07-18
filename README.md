@@ -42,3 +42,25 @@
 | 风险管控（开场警示/一键退出/无真实信息） | ✅ | 进入前风险告知、随时退出、全程不索取真实信息 |
 | AI 实时生成对话（混元大模型） | ⏳ | 预设话术树兜底（无需后端即可运行）；数据层已按"多角色 + System Prompt + 节点"结构组织，后续可无缝接入混元动态生成 |
 | AI 生成场景背景 / 角色立绘（混元3D） | ⏳ | 当前以文字场景条 + 字母头像代替，后续可接入图像生成 |
+
+## M5 · 小程序 / H5 适配、数据埋点、语音
+
+在 M1–M4（安全护栏 / 内容库 / 游戏化 / 复玩性）基础上，M5 完成「可分发、可度量、更沉浸」三类能力：
+
+### 1. 小程序 / H5 适配（`frontend/adapter.js`）
+- 自动检测 **微信内置浏览器** 与 **小程序 `web-view`** 环境，向 `<body>` 注入 `data-env="wechat|miniprogram|browser"`，便于样式与提示区分。
+- 已在 `index8.html` 配置 `viewport-fit=cover` + `env(safe-area-inset-*)` 安全区内边距，刘海屏 / 底部手势条正确留白。
+- 提供统一返回入口 `H5Adapter.navigateBack()`：小程序内走 `wx.miniProgram.navigateBack`，否则回退，方便在小程序里做「返回小程序页」。
+- **嵌入小程序**：在微信小程序中放置 `<web-view src="https://你的H5域名/index8.html">` 即可，无需改动游戏代码；建议同时配置业务域名与 TLS 证书。
+
+### 2. 数据埋点（`frontend/analytics.js` + 后端 `POST /api/track`）
+- **隐私优先**：仅采集匿名聚合事件（如 `game_start` / `scenario_start` / `ending_reached` / `redflag_hit` / `report_view` / `quickmode_finish`），**绝不记录姓名、手机号、聊天原文**，事件属性超长自动截断。
+- 事件先入本地缓冲，按节流（6s）或在页面隐藏（`visibilitychange` / `pagehide`）时批量上报，使用 `fetch(..., { keepalive: true })`。
+- 后端 `backend/src/controllers/analyticsController.js` **仅做计数聚合**（`byName` 计数 + 会话数），不落盘事件原文，仅写入聚合计数日志，便于评估教育效果而不留存 PII。
+- 本地无后端时静默降级，不影响游戏运行。可通过环境变量 `ANALYTICS_ENABLED=false` 关闭。
+- 聚合统计接口：`GET /api/track/stats`（运维观测）。
+
+### 3. 语音播报（`frontend/voice.js`）
+- 使用浏览器内置 **Web Speech API（SpeechSynthesis）** 朗读「骗子 / AI」消息（中文 `zh-CN`），零外部依赖、零网络请求。
+- 顶栏新增 🔊 语音开关，状态持久化；不支持的浏览器自动降级为 no-op。长文本自动截断，避免朗读过长。
+- 快速模式卡片话术同样支持朗读。
