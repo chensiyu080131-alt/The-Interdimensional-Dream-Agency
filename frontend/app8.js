@@ -779,6 +779,7 @@ function appendBubble(who, text, phase, scroll) {
   if (scroll) area.scrollTop = area.scrollHeight;
 }
 function showTyping() {
+  if (!S.story || !S.story.nodes || !S.story.nodes[S.node]) return;
   if (S.story.nodes[S.node].speaker !== S.activeConv) return;
   const area = $("chat-area");
   const m = document.createElement("div");

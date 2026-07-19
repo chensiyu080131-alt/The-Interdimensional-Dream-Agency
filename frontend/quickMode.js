@@ -41,7 +41,7 @@ function quickEffects(opt) {
   return { trust: +8, exposure: +8, suspicion: -4, conscience: -4 }; // 中性/配合 非坑
 }
 
-function clamp(v) { return Math.max(0, Math.min(100, v)); }
+function clampPct(v) { return Math.max(0, Math.min(100, v)); }
 
 function renderQuickStats() {
   const s = QM.stats;
@@ -99,10 +99,10 @@ function bindQuickSwipe(cautious, other) {
 
 function chooseQuick(opt) {
   const eff = quickEffects(opt);
-  QM.stats.trust = clamp(QM.stats.trust + eff.trust);
-  QM.stats.exposure = clamp(QM.stats.exposure + eff.exposure);
-  QM.stats.suspicion = clamp(QM.stats.suspicion + eff.suspicion);
-  QM.stats.conscience = clamp(QM.stats.conscience + eff.conscience);
+  QM.stats.trust = clampPct(QM.stats.trust + eff.trust);
+  QM.stats.exposure = clampPct(QM.stats.exposure + eff.exposure);
+  QM.stats.suspicion = clampPct(QM.stats.suspicion + eff.suspicion);
+  QM.stats.conscience = clampPct(QM.stats.conscience + eff.conscience);
   QM.total++;
   if (opt.redflag) { QM.traps++; trackRedflag(opt.redflag); }
   else if (opt.tone === "cautious") QM.avoided++;

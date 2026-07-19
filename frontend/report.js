@@ -43,7 +43,7 @@ function reportTypes() {
     const t = SCAM_TYPES[S.scenarioType];
     return t ? [t] : [];
   }
-  const idObj = IDENTITIES[S.idKey];
+  const idObj = S.idKey ? (IDENTITIES[S.idKey] || {}) : {};
   return (idObj.scamTypes || []).map((t) => SCAM_TYPES[t]).filter(Boolean);
 }
 
