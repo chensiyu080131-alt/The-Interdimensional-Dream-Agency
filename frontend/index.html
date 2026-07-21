@@ -15,12 +15,11 @@
     html,body{height:100%;overflow:hidden;}
     body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
       background:#05070f;display:flex;justify-content:center;align-items:stretch;overscroll-behavior:none;color:var(--tx);}
-    .phone{position:relative;width:100%;max-width:430px;height:100vh;height:100dvh;
-      background:linear-gradient(160deg,var(--bg1),var(--bg2));display:flex;flex-direction:column;overflow:hidden;box-shadow:0 0 40px rgba(0,0,0,.5);}
+    .phone{position:relative;width:100%;max-width:430px;height:100vh;height:100dvh;padding-top:16px;
+      background:linear-gradient(160deg,var(--bg1),var(--bg2));display:flex;flex-direction:column;overflow:hidden;box-shadow:0 0 40px rgba(0,0,0,.5);transition:background .6s;}
     .hidden{display:none !important;}
 
-    /* ---------- 通用弹层 ---------- */
-    .overlay{position:absolute;inset:0;z-index:60;background:rgba(5,7,15,.72);backdrop-filter:blur(4px);
+    .overlay{position:absolute;inset:0;z-index:60;background:rgba(5,7,15,.78);backdrop-filter:blur(5px);
       display:none;align-items:center;justify-content:center;padding:16px;overflow-y:auto;}
     .overlay.show{display:flex;}
     .sheet{background:linear-gradient(160deg,#141a35,#10121f);border:1px solid var(--line);border-radius:20px;
@@ -32,7 +31,7 @@
     .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--tx2);}
     .btn.gray{background:#2a3150;color:#cdd3e0;}
 
-    /* ---------- 开场警示 ---------- */
+    /* 警示 */
     .warn-screen{position:absolute;inset:0;z-index:90;background:var(--bg1);display:flex;flex-direction:column;justify-content:center;padding:30px 26px;overflow-y:auto;}
     .warn-inner{max-width:380px;margin:0 auto;}
     .warn-screen .kicker{color:var(--hl);font-size:13px;letter-spacing:2px;text-align:center;margin-bottom:8px;}
@@ -42,10 +41,25 @@
     .warn-box{background:rgba(220,20,60,.14);border:1px solid var(--warn);border-radius:14px;padding:14px;margin:6px 0 16px;}
     .warn-box p{color:#ffb3b3;margin-bottom:6px;font-size:13px;}.warn-box p:last-child{margin-bottom:0;}
     .warn-screen .age{font-size:12px;color:#8a93a8;text-align:center;margin:12px 0;}
+    /* M2 单人演练入口按钮 */
+    .drill-btn{margin-top:14px;background:linear-gradient(90deg,#7B5CFF,#5566ff);color:#fff;border:none;border-radius:14px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;}
+    .drill-btn:active{opacity:.85;}
+    .scen-debrief{background:rgba(127,178,255,.12);border-left:3px solid var(--hl);border-radius:10px;padding:11px 13px;font-size:13px;color:#cfe0ff;line-height:1.7;margin:12px 0 4px;}
     .agree{background:#07C160;color:#fff;border:none;border-radius:14px;padding:15px;font-size:16px;font-weight:800;cursor:pointer;width:100%;}
     .disagree{background:none;color:#8a93a8;border:1px solid #2a3150;border-radius:14px;padding:11px;font-size:13px;margin-top:10px;cursor:pointer;width:100%;}
 
-    /* ---------- 身份卡 ---------- */
+    /* 身份选择 */
+    .idselect-sheet{max-width:400px;}
+    .idopt{display:flex;gap:12px;align-items:center;padding:12px;border-radius:14px;cursor:pointer;margin-bottom:10px;background:rgba(255,255,255,.04);border:1px solid var(--line);transition:background .15s;}
+    .idopt:active{background:rgba(255,255,255,.1);}
+    .idopt.locked{opacity:.5;cursor:not-allowed;filter:grayscale(.6);}
+    .idopt-av{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:20px;flex:0 0 auto;}
+    .idopt-mid{flex:1;min-width:0;}
+    .idopt-name{font-size:15px;font-weight:700;}
+    .idopt-ms{font-size:12px;color:var(--tx2);margin-top:2px;line-height:1.4;}
+    .idopt-lock{font-size:11px;color:var(--gold);margin-top:3px;}
+
+    /* 身份卡 */
     .idcard{text-align:center;}
     .idcard .frame{border:1px solid var(--line);border-radius:16px;padding:18px 16px;background:rgba(255,255,255,.03);}
     .idcard .top{font-size:12px;letter-spacing:3px;color:var(--tx2);margin-bottom:12px;}
@@ -63,42 +77,54 @@
     .id-brief .bnum{width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,.12);font-size:11px;display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
     .id-oath{margin-top:14px;font-style:italic;color:var(--gold);font-size:14px;text-align:center;}
 
-    /* ---------- 顶部状态栏 ---------- */
-    .topbar{flex:0 0 auto;padding:12px 14px 10px;border-bottom:1px solid var(--line);background:rgba(0,0,0,.2);}
+    /* 顶部状态栏 */
+    .topbar{flex:0 0 auto;padding:10px 14px 8px;border-bottom:1px solid var(--line);background:rgba(0,0,0,.25);}
     .top-line1{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--tx2);}
     .top-line1 .cn{color:var(--hl);font-weight:800;font-size:15px;}
-    .top-task{font-size:13px;color:var(--gold);margin-top:6px;font-weight:600;}
-    .susp-wrap{display:flex;align-items:center;gap:8px;margin-top:8px;}
+    .act-badge{font-size:10px;font-weight:800;letter-spacing:1px;}
+    .top-task{font-size:13px;color:var(--gold);margin-top:4px;font-weight:600;}
+    .rel-wrap{display:flex;align-items:center;gap:6px;margin-top:5px;font-size:11px;color:var(--tx2);}
+    .rel-bar{letter-spacing:1px;color:#ffb38a;}
+    .susp-wrap{display:flex;align-items:center;gap:8px;margin-top:6px;}
     .susp-wrap .lab{font-size:11px;color:var(--tx2);white-space:nowrap;}
     .susp-track{flex:1;height:5px;background:rgba(255,255,255,.12);border-radius:3px;overflow:hidden;}
     .susp-fill{height:100%;width:0;background:linear-gradient(90deg,#07C160,#FFD700,#FF8C42,#DC143C);transition:width .4s;}
     .susp-state{font-size:11px;font-weight:700;white-space:nowrap;}
+    .xiaoya-wrap{display:flex;align-items:center;gap:8px;margin-top:6px;}
+    .xiaoya-wrap .lab{font-size:11px;color:#F0A020;white-space:nowrap;}
+    .xiaoya-track{flex:1;height:5px;background:rgba(255,255,255,.12);border-radius:3px;overflow:hidden;}
+    .xiaoya-fill{height:100%;width:0;background:linear-gradient(90deg,#F0A020,#FFD700);transition:width .4s;}
+    .xiaoya-label{font-size:11px;font-weight:700;color:#F0A020;white-space:nowrap;}
     .exit-btn{background:none;border:1px solid rgba(255,255,255,.2);color:#ff9b9b;border-radius:12px;padding:3px 10px;font-size:12px;cursor:pointer;}
+    /* M5 语音开关：开启状态高亮 */
+    #btn-voice.voice-on{background:rgba(7,193,96,.22);border-color:#07C160;color:#7fe0ab;}
 
-    /* ---------- 场景条 ---------- */
-    .scene-bar{flex:0 0 auto;padding:9px 14px;font-size:12px;color:var(--tx2);font-style:italic;background:rgba(255,107,53,.06);border-bottom:1px solid var(--line);}
+    /* 场景条 */
+    .scene-bar{flex:0 0 auto;padding:8px 14px;font-size:12px;color:var(--tx2);font-style:italic;transition:background .4s;}
 
-    /* ---------- 对话头 ---------- */
+    /* 对话头 */
     .chat-head{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line);background:rgba(0,0,0,.15);}
     .chat-av{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;flex:0 0 auto;}
     .chat-head .ct{font-size:15px;font-weight:700;}
     .chat-head .cs{font-size:11px;color:var(--tx2);}
 
-    /* ---------- 对话区 ---------- */
+    /* 对话区 */
     .chat-area{flex:1;overflow-y:auto;padding:14px 12px;}
     .msg{max-width:80%;margin-bottom:12px;display:flex;flex-direction:column;}
     .msg.ai{align-self:flex-start;}.msg.me{align-self:flex-end;align-items:flex-end;}
-    .bubble{padding:11px 14px;border-radius:14px;font-size:15px;line-height:1.55;word-break:break-word;backdrop-filter:blur(20px);}
+    .msg.sys{align-self:center;max-width:92%;}
+    .bubble{padding:11px 14px;border-radius:14px;font-size:15px;line-height:1.55;word-break:break-word;backdrop-filter:blur(20px);white-space:pre-line;}
     .msg.ai .bubble{background:rgba(255,255,255,.1);color:#fff;border-top-left-radius:3px;}
     .msg.me .bubble{background:var(--hl);color:#fff;border-top-right-radius:3px;}
     .msg .tag{font-size:10px;color:var(--tx2);margin-top:4px;}
+    .collapse-screen{background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.15);color:#dfe4ef;font-size:14px;line-height:1.7;border-radius:12px;padding:14px;text-align:center;}
     .typing{display:flex;gap:4px;padding:12px 14px;background:rgba(255,255,255,.1);border-radius:14px;width:fit-content;}
     .typing span{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.6);animation:blink 1s infinite;}
     .typing span:nth-child(2){animation-delay:.2s;}.typing span:nth-child(3){animation-delay:.4s;}
     @keyframes blink{0%,100%{opacity:.3}50%{opacity:1}}
 
-    /* ---------- 选项区 ---------- */
-    .options-bar{flex:0 0 auto;padding:10px 12px;display:flex;flex-direction:column;gap:8px;max-height:44%;overflow-y:auto;border-top:1px solid var(--line);background:rgba(0,0,0,.2);}
+    /* 选项区 */
+    .options-bar{flex:0 0 auto;padding:10px 12px;display:flex;flex-direction:column;gap:8px;max-height:46%;overflow-y:auto;border-top:1px solid var(--line);background:rgba(0,0,0,.25);}
     .opt-btn{background:rgba(255,255,255,.07);border:1px solid var(--line);border-radius:14px;padding:12px 13px;font-size:14px;color:#fff;text-align:left;cursor:pointer;transition:all .15s;}
     .opt-btn:active{background:rgba(255,107,53,.18);border-color:var(--hl);}
     .opt-btn .otype{font-size:10px;padding:2px 7px;border-radius:8px;margin-right:8px;font-weight:700;}
@@ -106,19 +132,130 @@
     .opt-neutral{background:rgba(87,107,149,.3);color:#a9b8dc;}
     .opt-cautious{background:rgba(7,193,96,.2);color:#7fe0ab;}
     .opt-counter{background:rgba(142,68,173,.3);color:#d5a9ec;}
+    /* M2 演练选项标签：坑=危险选项，稳=安全选项 */
+    .opt-bad{background:rgba(220,20,60,.32);color:#ff9aa6;}
+    .opt-good{background:rgba(7,193,96,.28);color:#7fe0ab;}
+    /* M3 弱点加权：命中玩家弱点的“配合”选项更显眼 */
+    .opt-weak{background:rgba(255,107,53,.45);color:#ffd9b0;animation:pulseWeak 1.4s infinite;}
+    @keyframes pulseWeak{0%,100%{box-shadow:0 0 0 0 rgba(255,107,53,.0);}50%{box-shadow:0 0 0 3px rgba(255,107,53,.35);}}
+    .opt-weak-hi{border-color:rgba(255,107,53,.55);}
+
+    /* M3 内心戏旁白：第二人称半透明浮层 */
+    .inner-mono{position:absolute;left:50%;top:30%;transform:translate(-50%,-50%) scale(.96);
+      max-width:80%;z-index:85;pointer-events:none;opacity:0;transition:opacity .5s,transform .5s;
+      background:rgba(10,14,28,.82);border:1px solid rgba(127,178,255,.4);border-radius:16px;
+      padding:16px 18px;font-size:14px;line-height:1.7;color:#cfe0ff;font-style:italic;text-align:center;
+      box-shadow:0 8px 30px rgba(0,0,0,.5);}
+    .inner-mono.show{opacity:1;transform:translate(-50%,-50%) scale(1);}
+
+    /* M3 蝴蝶效应流程图 */
+    .butterfly-list{max-height:230px;overflow-y:auto;margin:6px 0 12px;padding:4px 2px;}
+    .bf-node{background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:12px;padding:10px 12px;}
+    .bf-idx{font-size:11px;color:var(--hl);font-weight:700;margin-bottom:3px;}
+    .bf-phase{font-size:11px;color:#8a93a8;margin-bottom:4px;}
+    .bf-chosen{font-size:13px;color:#9fe6c0;}
+    .bf-alt{font-size:12px;color:#9aa6c4;margin-top:3px;}
+    .bf-arrow{text-align:center;color:#4a557a;font-size:16px;margin:2px 0;}
+    .bf-empty{font-size:13px;color:var(--tx2);padding:8px;}
+
+    /* M3 结局图鉴 */
+    .gallery-sheet{max-width:460px;}
+    .gallery-sub{font-size:12px;color:var(--tx2);margin:4px 0 12px;}
+    .ending-gallery-list{max-height:64vh;overflow-y:auto;}
+    .eg-id{margin-bottom:16px;}
+    .eg-id-h{font-size:14px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:8px;}
+    .eg-av{width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:13px;color:#fff;}
+    .eg-count{margin-left:auto;font-size:12px;color:var(--hl);background:rgba(127,178,255,.12);padding:2px 8px;border-radius:8px;}
+    .eg-cells{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+    .eg-cell{background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:10px;padding:9px 10px;font-size:12px;}
+    .eg-cell.good{border-left:3px solid #07C160;}
+    .eg-cell.bad{border-left:3px solid #DC143C;}
+    .eg-cell.locked{opacity:.55;border-style:dashed;text-align:center;}
+    .eg-t{font-weight:700;margin-bottom:4px;color:#e6eef8;}
+    .eg-r{color:#a9b3c9;line-height:1.6;}
+    .eg-lock{color:#6f7794;}
     .free-row{display:flex;gap:8px;}
     .free-input{flex:1;border:1px solid var(--line);background:rgba(255,255,255,.06);color:#fff;border-radius:14px;padding:11px 13px;font-size:14px;}
     .free-input::placeholder{color:#6f7794;}
     .free-send{background:var(--hl);color:#fff;border:none;border-radius:14px;padding:0 18px;font-size:14px;font-weight:700;cursor:pointer;}
     .wait-tip{font-size:13px;color:var(--tx2);text-align:center;padding:8px;}
 
-    /* ---------- 底部功能栏 ---------- */
+    /* ===== M4.1 证据墙 ===== */
+    .ev-badge{display:none;align-items:center;gap:4px;margin-top:4px;align-self:flex-start;
+      background:rgba(123,92,255,.18);border:1px solid rgba(123,92,255,.5);color:#cbb6ff;
+      font-size:11px;font-weight:700;padding:3px 9px;border-radius:10px;cursor:pointer;}
+    .evidence-chip{display:none;align-items:center;gap:8px;background:rgba(123,92,255,.14);
+      border:1px dashed rgba(123,92,255,.55);border-radius:12px;padding:8px 10px;margin-bottom:8px;font-size:12px;color:#d7c9ff;}
+    .evidence-chip .ec-ico{font-size:15px;}
+    .evidence-chip .ec-txt{flex:1;}
+    .evidence-chip .ec-btn{background:#7B5CFF;color:#fff;border:none;border-radius:10px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;}
+    .evidence-chip .ec-btn:active{opacity:.85;}
+    .counters-badge{background:linear-gradient(135deg,rgba(7,193,96,.22),rgba(123,92,255,.18));
+      border:1px solid rgba(7,193,96,.5);border-radius:14px;padding:12px 14px;margin:10px 0;}
+    .counters-badge .ce-title{font-size:14px;font-weight:800;color:#7fe0ab;margin-bottom:5px;}
+    .counters-badge .ce-desc{font-size:12px;color:#cfe0ff;line-height:1.7;}
+    .ev-sheet{max-width:440px;}
+    .ev-head{display:flex;align-items:center;justify-content:space-between;font-size:16px;font-weight:800;margin-bottom:12px;}
+    .ev-close{background:rgba(255,255,255,.12);border:none;color:#fff;border-radius:50%;width:28px;height:28px;cursor:pointer;font-size:14px;}
+    .ev-body{max-height:62vh;overflow-y:auto;}
+    .ev-wall-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+    .ev-wall-title{font-size:13px;color:#cfe0ff;font-weight:700;}
+    .ev-wall-prog{font-size:13px;font-weight:800;color:#8a93a8;}
+    .ev-wall-prog.done{color:#07C160;}
+    .ev-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+    .ev-card{border-radius:14px;padding:12px;background:rgba(255,255,255,.05);border:1px solid var(--line);text-align:center;}
+    .ev-card.got{border-color:var(--ec);box-shadow:0 0 0 1px var(--ec) inset;}
+    .ev-card.locked{opacity:.5;}
+    .ev-icon{font-size:26px;margin-bottom:6px;}
+    .ev-type{font-size:12px;font-weight:700;margin-bottom:4px;}
+    .ev-label{font-size:11px;color:var(--tx2);line-height:1.5;}
+    .ev-hint{font-size:12px;color:var(--tx2);line-height:1.7;margin-top:12px;background:rgba(255,255,255,.04);border-radius:10px;padding:10px;}
+
+    /* ===== M4.3 快速模式（Reigns 式） ===== */
+    .quick-screen{position:absolute;inset:0;z-index:90;background:linear-gradient(160deg,#0b1224,#161a30);
+      display:flex;flex-direction:column;padding:14px 14px 20px;}
+    .quick-top{display:flex;align-items:center;justify-content:space-between;}
+    .quick-hd{font-size:15px;font-weight:800;color:#cfe0ff;}
+    .quick-exit{background:rgba(255,255,255,.12);border:none;color:#fff;border-radius:50%;width:30px;height:30px;cursor:pointer;font-size:15px;}
+    .quick-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0;}
+    .qs-pill{background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:12px;padding:8px 10px;}
+    .qs-lab{font-size:11px;color:var(--tx2);}
+    .qs-val{font-size:18px;font-weight:800;color:#e6eef8;margin-left:6px;}
+    .qs-track{height:5px;background:rgba(255,255,255,.08);border-radius:3px;margin-top:6px;overflow:hidden;}
+    .qs-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--hl),var(--gold));transition:width .35s ease;}
+    .quick-card-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;}
+    .quick-card{width:100%;max-width:380px;background:rgba(255,255,255,.06);border:1px solid rgba(127,178,255,.35);
+      border-radius:20px;padding:26px 22px;min-height:200px;display:flex;flex-direction:column;justify-content:center;
+      transition:transform .26s ease,opacity .26s ease;touch-action:pan-y;}
+    .quick-card.swipe-l{transform:translateX(-120%) rotate(-12deg);opacity:0;}
+    .quick-card.swipe-r{transform:translateX(120%) rotate(12deg);opacity:0;}
+    .quick-phase{font-size:11px;color:var(--hl);font-weight:700;margin-bottom:12px;text-align:center;}
+    .quick-line{font-size:16px;line-height:1.8;color:#eaf1ff;text-align:center;}
+    .quick-left,.quick-right{position:absolute;bottom:54px;font-size:12px;font-weight:700;color:#8a93a8;
+      max-width:42%;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid var(--line);}
+    .quick-left{left:6px;color:#7fe0ab;}
+    .quick-right{right:6px;color:#ffb3b3;}
+    .quick-hint{text-align:center;font-size:12px;color:var(--tx2);margin-top:10px;}
+    .quick-result-card{text-align:center;max-width:380px;}
+    .qr-hd{font-size:14px;color:var(--tx2);margin-bottom:8px;}
+    .qr-idx{font-size:54px;font-weight:900;line-height:1;}
+    .qr-verdict{font-size:15px;font-weight:800;margin:10px 0 6px;}
+    .qr-detail{font-size:12px;color:var(--tx2);line-height:1.7;}
+
+    /* ===== M4.4 UI 细节：红标微抖动 / 转账震动冷灰 ===== */
+    .opt-bad{animation:rfShake 1.8s infinite;}
+    @keyframes rfShake{0%,100%{transform:translateX(0);}25%{transform:translateX(-1px);}75%{transform:translateX(1px);}}
+    .shake{animation:phoneShake .5s;}
+    @keyframes phoneShake{0%,100%{transform:translate(0,0);}20%{transform:translate(-6px,3px);}40%{transform:translate(6px,-3px);}60%{transform:translate(-5px,2px);}80%{transform:translate(5px,-2px);}}
+    .cold{filter:grayscale(.55) brightness(.82);transition:filter .3s;}
+
+    /* 底部栏 */
     .navbar{flex:0 0 auto;display:flex;border-top:1px solid var(--line);background:rgba(0,0,0,.3);}
     .nav-item{flex:1;background:none;border:none;color:var(--tx2);padding:9px 0 calc(9px + env(safe-area-inset-bottom));cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;}
     .nav-item .ic{font-size:19px;}
     .nav-item:active{color:var(--hl);}
 
-    /* ---------- 对话列表 ---------- */
+    /* 对话列表 */
     .conv-row{display:flex;align-items:center;gap:12px;padding:12px;border-radius:14px;cursor:pointer;transition:background .15s;position:relative;}
     .conv-row:active,.conv-row.active{background:rgba(255,255,255,.08);}
     .conv-av{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;flex:0 0 auto;}
@@ -128,7 +265,7 @@
     .conv-last{font-size:12px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;}
     .conv-dot{width:9px;height:9px;border-radius:50%;background:var(--warn);flex:0 0 auto;}
 
-    /* ---------- 任务 ---------- */
+    /* 任务 */
     .task-progress{text-align:center;font-size:12px;color:var(--gold);margin-bottom:12px;}
     .task-card{border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:10px;background:rgba(255,255,255,.03);}
     .task-card.active{border-color:var(--gold);background:rgba(255,215,0,.06);}
@@ -137,7 +274,7 @@
     .task-h{font-size:14px;font-weight:600;}
     .task-dep{font-size:11px;color:var(--tx2);margin-top:4px;}
 
-    /* ---------- 状态/档案 ---------- */
+    /* 状态/档案 */
     .st-row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px dashed rgba(255,255,255,.1);font-size:14px;color:#cdd3e0;}
     .st-tip{font-size:12px;color:var(--tx2);margin-top:12px;line-height:1.6;background:rgba(255,255,255,.04);border-radius:10px;padding:10px;}
     .pf-hd{display:flex;gap:12px;align-items:center;margin-bottom:12px;}
@@ -148,56 +285,162 @@
     .pf-sec b{color:var(--gold);margin-right:8px;}
     .pf-oath{margin-top:12px;font-style:italic;color:var(--gold);text-align:center;font-size:14px;}
 
-    /* ---------- 结局 ---------- */
-    .ending-badge{display:inline-block;font-size:12px;font-weight:800;color:#fff;padding:4px 14px;border-radius:20px;}
-    .ending-hd{text-align:center;margin-bottom:12px;}
-    .ending-title{font-size:20px;font-weight:800;margin:10px 0 4px;}
-    .ending-score{text-align:center;font-size:42px;font-weight:900;margin:8px 0;}
-    .ending-stats{display:flex;gap:8px;margin:10px 0 16px;}
-    .ending-stats .es{flex:1;text-align:center;background:rgba(255,255,255,.05);border-radius:12px;padding:10px 4px;font-size:11px;color:var(--tx2);}
-    .ending-stats .es span{display:block;font-size:19px;font-weight:800;color:#fff;margin-bottom:2px;}
-    .ending-text{font-size:14px;line-height:1.8;color:#dfe4ef;background:rgba(255,255,255,.04);border-radius:12px;padding:14px;}
-    .ending-review{font-size:13px;line-height:1.7;color:#ffcf9e;background:rgba(255,107,53,.1);border:1px solid rgba(255,107,53,.3);border-radius:12px;padding:12px;margin-top:12px;}
-    .ending-review b{display:block;color:var(--hl);margin-bottom:4px;}
+    /* 第三幕·废墟 */
+    .ruins-list{display:flex;flex-direction:column;gap:10px;margin:8px 0 14px;}
+    .ruin-btn{display:flex;align-items:center;gap:12px;padding:14px;border-radius:14px;cursor:pointer;background:rgba(255,255,255,.05);border:1px solid var(--line);text-align:left;color:var(--tx);transition:all .15s;}
+    .ruin-btn:active{background:rgba(255,215,0,.12);}
+    .ruin-btn.done{border-color:var(--gold);background:rgba(255,215,0,.08);}
+    .ruin-ic{font-size:24px;}
+    .ruin-txt{flex:1;display:flex;flex-direction:column;gap:2px;}
+    .ruin-txt b{font-size:15px;}
+    .ruin-txt span{font-size:12px;color:var(--tx2);}
+    .ruin-done{color:var(--gold);font-size:18px;}
 
-    /* ---------- 时间线 ---------- */
-    .tl-item{position:relative;padding:0 0 18px 22px;border-left:2px solid var(--hl);}
+    /* 第四幕·回放 */
+    .replay-end{background:rgba(255,255,255,.04);border-radius:12px;padding:14px;margin-bottom:12px;}
+    .replay-end .rt{font-size:18px;font-weight:800;text-align:center;margin-bottom:6px;}
+    .replay-end .rx{font-size:14px;line-height:1.8;color:#dfe4ef;}
+    .replay-end .rr{font-size:13px;line-height:1.7;color:#ffcf9e;margin-top:10px;background:rgba(255,107,53,.1);border:1px solid rgba(255,107,53,.3);border-radius:10px;padding:10px;}
+    .replay-end .rr b{color:var(--hl);}
+    .tl-item{position:relative;padding:0 0 16px 22px;border-left:2px solid var(--hl);}
     .tl-item:last-child{border-left-color:transparent;}
     .tl-dot{position:absolute;left:-7px;top:2px;width:12px;height:12px;border-radius:50%;background:var(--hl);}
     .tl-day{font-size:12px;color:var(--hl);font-weight:700;}
     .tl-phase{font-size:11px;color:var(--gold);font-weight:600;}
-    .tl-text{font-size:14px;color:#dfe4ef;line-height:1.6;margin-top:3px;}
+    .tl-text{font-size:13px;color:#dfe4ef;line-height:1.6;margin-top:3px;white-space:pre-line;}
 
-    /* ---------- 工具箱 ---------- */
+    /* 平行宇宙 */
+    .pl-item{background:rgba(255,255,255,.05);border-radius:12px;padding:12px;margin-bottom:10px;}
+    .pl-q{font-size:13px;font-weight:700;color:#a9b8dc;margin-bottom:6px;}
+    .pl-a{font-size:13px;line-height:1.7;color:#dfe4ef;}
+    .free-row.fixed{margin-top:8px;}
+
+    /* 第五幕·盾牌 */
+    .shield-hd{text-align:center;margin-bottom:10px;}
+    .shield-title{font-size:20px;font-weight:800;}
+    .shield-sub{font-size:12px;color:var(--tx2);margin-top:3px;}
+    .shield-score{text-align:center;font-size:44px;font-weight:900;margin:6px 0;}
+    .shield-stars{text-align:center;font-size:18px;color:var(--gold);margin-bottom:10px;}
+    .shield-stats{display:flex;gap:8px;margin:10px 0 12px;}
+    .shield-stats .es{flex:1;text-align:center;background:rgba(255,255,255,.05);border-radius:12px;padding:10px 4px;font-size:11px;color:var(--tx2);}
+    .shield-stats .es span{display:block;font-size:19px;font-weight:800;color:#fff;margin-bottom:2px;}
+    .shield-weak{font-size:13px;line-height:1.7;color:#dfe4ef;background:rgba(30,144,255,.12);border:1px solid rgba(30,144,255,.3);border-radius:12px;padding:12px;margin-bottom:10px;}
+    .shield-tips{margin-top:6px;}
+    .shield-tip{font-size:13px;color:#cdd3e0;padding:6px 0;border-bottom:1px dashed rgba(255,255,255,.1);}
+
+  /* ===== M2 避坑报告生成器 ===== */
+  .pf-wrap{margin-top:12px;border-top:1px solid rgba(255,255,255,.12);padding-top:12px;}
+  .pf-hd{font-size:15px;font-weight:800;color:var(--gold);margin-bottom:10px;}
+  .pf-score{text-align:center;margin-bottom:12px;}
+  .pf-score-num{font-size:26px;font-weight:900;}
+  .pf-score-sub{font-size:12px;color:var(--tx2);margin-top:4px;}
+  .pf-bar{height:8px;border-radius:4px;background:rgba(255,255,255,.1);overflow:hidden;margin-top:8px;}
+  .pf-bar-fill{height:100%;border-radius:4px;transition:width .6s ease;}
+  .pf-sec-t{font-size:13px;font-weight:700;color:#9FD0FF;margin:12px 0 6px;}
+  .pf-chips{display:flex;flex-wrap:wrap;gap:6px;}
+  .pf-chip{font-size:11px;background:rgba(30,144,255,.16);border:1px solid rgba(30,144,255,.35);color:#cfe4ff;border-radius:20px;padding:4px 10px;}
+  .pf-flag{background:rgba(220,20,60,.1);border:1px solid rgba(220,20,60,.3);border-radius:12px;padding:10px;margin-bottom:8px;}
+  .pf-flag-h{display:flex;align-items:center;gap:6px;font-size:13px;}
+  .pf-flag-dot{width:8px;height:8px;border-radius:50%;background:#DC143C;display:inline-block;}
+  .pf-flag-cat{font-size:10px;color:rgba(255,255,255,.5);margin-left:auto;border:1px solid rgba(255,255,255,.2);border-radius:10px;padding:1px 7px;}
+  .pf-flag-why{font-size:12px;color:#e7d2d2;line-height:1.6;margin-top:5px;}
+  .pf-flag-save{font-size:12px;color:#9affc0;line-height:1.6;margin-top:5px;}
+  .pf-clean{background:rgba(7,193,96,.12);border:1px solid rgba(7,193,96,.35);border-radius:12px;padding:12px;font-size:13px;color:#bff3d3;line-height:1.7;}
+  .pf-young{font-size:13px;color:#ffd6a0;background:rgba(255,165,0,.1);border-radius:10px;padding:10px;line-height:1.6;}
+  .pf-peer{font-size:12px;color:#dfe4ef;background:rgba(255,255,255,.05);border-radius:10px;padding:10px;line-height:1.7;}
+  .pf-poem{font-size:14px;font-weight:700;color:#FFD700;background:rgba(255,215,0,.1);border:1px dashed rgba(255,215,0,.4);border-radius:12px;padding:12px;margin-top:10px;text-align:center;}
+
+    /* 工具箱 */
     .tool-item{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.08);}
     .tool-ic{width:38px;height:38px;border-radius:10px;background:rgba(7,193,96,.15);color:#7fe0ab;display:flex;align-items:center;justify-content:center;font-size:18px;flex:0 0 auto;}
     .tool-txt h4{font-size:14px;margin-bottom:2px;}.tool-txt p{font-size:12px;color:var(--tx2);line-height:1.5;}
     .kw-cloud{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0;}
     .kw{font-size:11px;background:rgba(7,193,96,.15);color:#7fe0ab;border-radius:8px;padding:4px 8px;}
 
-    /* ---------- Toast & 抖动 ---------- */
-    #toast{position:absolute;left:50%;top:64px;transform:translateX(-50%) translateY(-16px);z-index:95;
-      background:rgba(0,0,0,.82);color:#fff;font-size:13px;padding:9px 16px;border-radius:20px;opacity:0;pointer-events:none;transition:all .3s;white-space:nowrap;}
+    /* Toast & 抖动 */
+    #toast{position:absolute;left:50%;top:60px;transform:translateX(-50%) translateY(-16px);z-index:95;
+      background:rgba(0,0,0,.82);color:#fff;font-size:13px;padding:9px 16px;border-radius:20px;opacity:0;pointer-events:none;transition:all .3s;white-space:nowrap;max-width:90%;}
     #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
     @keyframes shake{0%,100%{transform:translate(0,0)}20%{transform:translate(-6px,3px)}40%{transform:translate(5px,-4px)}60%{transform:translate(-4px,2px)}80%{transform:translate(3px,-3px)}}
     .phone.shake{animation:shake .5s;}
+
+    /* AI 加载状态：对方正在输入... */
+    .typing-bubble{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.08);border-radius:18px 18px 18px 4px;padding:10px 16px;max-width:85%;}
+    .typing-label{font-size:12px;color:rgba(255,255,255,.45);white-space:nowrap;}
+
+    /* 错误消息 + 重试按钮 */
+    .error-bubble{display:flex;flex-direction:column;gap:6px;background:rgba(220,20,60,.12);border:1px solid rgba(220,20,60,.3);border-radius:14px;padding:12px 14px;max-width:88%;margin:0 auto;}
+    .error-icon{font-size:16px;}
+    .error-text{font-size:13px;color:#ffb3b3;font-weight:600;}
+    .error-detail{font-size:11px;color:rgba(255,255,255,.4);word-break:break-all;line-height:1.4;}
+    .error-retry-btn{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:10px;color:#fff;font-size:13px;padding:8px 14px;cursor:pointer;align-self:flex-start;transition:background .15s;}
+    .error-retry-btn:active{background:rgba(255,255,255,.22);}
+
+    /* 任务进度条 */
+    .task-prog-bar{width:100%;height:4px;background:rgba(255,255,255,.08);border-radius:2px;margin-top:6px;overflow:hidden;}
+    .task-prog-fill{height:100%;background:linear-gradient(90deg,var(--hl),var(--gold));border-radius:2px;transition:width .5s ease;}
+    .task-prog-num{font-size:10px;color:rgba(255,255,255,.4);text-align:right;margin-top:2px;}
+    .task-prog-num.done{color:#07C160;}
+
+    /* ===== M1.2 模拟演示水印（非遮挡·全局固定） ===== */
+    /* 顶部细条：常驻、明确、不遮挡操作 */
+    .sim-watermark{position:absolute;left:0;right:0;top:0;z-index:82;pointer-events:none;
+      text-align:center;font-size:10px;letter-spacing:1px;color:rgba(255,255,255,.5);
+      padding:2px 0;background:rgba(220,20,60,.22);}
+    .sim-watermark b{color:rgba(255,200,150,.95);font-weight:700;}
+    /* 居中大号斜纹水印：极淡、纯装饰、绝不遮挡 */
+    .sim-watermark-bg{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:hidden;
+      display:flex;align-items:center;justify-content:center;}
+    .sim-watermark-bg span{transform:rotate(-24deg);font-size:34px;font-weight:900;letter-spacing:4px;
+      color:rgba(255,255,255,.05);white-space:nowrap;text-align:center;line-height:2.4;}
+
+    /* ===== M1.3 呼吸环节（幕间缓冲页） ===== */
+    .breath-screen{position:absolute;inset:0;z-index:88;background:radial-gradient(circle at 50% 42%,#12203a,#070a14 70%);
+      display:none;flex-direction:column;align-items:center;justify-content:center;padding:34px 28px;text-align:center;}
+    .breath-screen.show{display:flex;}
+    .breath-ring{width:120px;height:120px;border-radius:50%;margin-bottom:26px;
+      background:radial-gradient(circle,rgba(30,144,255,.35),rgba(30,144,255,.05));
+      border:2px solid rgba(120,180,255,.5);animation:breathe 6s ease-in-out infinite;
+      display:flex;align-items:center;justify-content:center;font-size:13px;color:#bcd4ff;}
+    @keyframes breathe{0%,100%{transform:scale(.72);opacity:.6}50%{transform:scale(1.08);opacity:1}}
+    .breath-title{font-size:20px;font-weight:800;color:#dbe7ff;margin-bottom:10px;}
+    .breath-text{font-size:14px;line-height:1.9;color:#9fb2d6;max-width:320px;margin-bottom:8px;}
+    .breath-safe{font-size:13px;color:#7fe0ab;margin:6px 0 24px;font-style:italic;}
+    .breath-continue{background:#1E90FF;color:#fff;border:none;border-radius:14px;padding:14px 30px;font-size:15px;font-weight:700;cursor:pointer;}
+    .breath-continue:active{opacity:.85;transform:scale(.99);}
+    .breath-exit{background:none;border:1px solid rgba(255,255,255,.2);color:#8a93a8;border-radius:12px;padding:10px 22px;font-size:13px;margin-top:12px;cursor:pointer;}
+
+    /* ===== M1.2 结局页免责声明 ===== */
+    .disclaimer-box{margin-top:14px;background:rgba(220,20,60,.1);border:1px solid rgba(220,20,60,.32);
+      border-radius:12px;padding:12px 14px;font-size:11.5px;line-height:1.7;color:#e5b8b8;}
+    .disclaimer-box b{color:#ff9b9b;}
   </style>
 </head>
 <body>
   <div class="phone" id="phone">
+
+    <!-- M3 内心戏旁白（第二人称半透明浮层） -->
+    <div class="inner-mono" id="inner-mono"></div>
 
     <!-- 游戏主界面 -->
     <div id="game-root" class="hidden" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
       <div class="topbar">
         <div class="top-line1">
           <div><span class="cn" id="top-codename">猎鹰</span> · <span id="top-day">第 1 天</span></div>
-          <button class="exit-btn hidden" id="btn-exit">退出</button>
-        </div>
-        <div class="top-task" id="top-task">🎯 —</div>
+        <div style="text-align:right"><span class="act-badge" id="act-badge">第 1 幕 · 希望</span><br/><span class="act-sub" id="act-sub" style="font-size:10px;color:var(--tx2)"></span><br/><button class="exit-btn hidden" id="btn-voice" style="margin-top:3px;margin-right:6px" title="语音播报">🔈</button><button class="exit-btn hidden" id="btn-exit" style="margin-top:3px">退出</button></div>
+      </div>
+      <div class="top-task" id="top-task">🎯 —</div>
+      <button class="ev-badge hidden" id="evidence-badge" style="display:none">📎 证据 0/0</button>
+        <div class="rel-wrap"><span>关系</span><span class="rel-bar" id="rel-bar">░░░░</span></div>
         <div class="susp-wrap">
           <span class="lab">骗子怀疑度</span>
           <div class="susp-track"><div class="susp-fill" id="susp-fill"></div></div>
           <span class="susp-state" id="susp-label">安全</span>
+        </div>
+        <div class="xiaoya-wrap hidden" id="xiaoya-wrap">
+          <span class="lab">🆘 小雅</span>
+          <div class="xiaoya-track"><div class="xiaoya-fill" id="xiaoya-fill"></div></div>
+          <span class="xiaoya-label" id="xiaoya-label">救援中</span>
         </div>
       </div>
 
@@ -209,7 +452,13 @@
       </div>
 
       <div class="chat-area" id="chat-area"></div>
-      <div class="options-bar" id="options-bar"></div>
+      <div class="options-bar" id="options-bar">
+        <!-- M4.1 证据收集提示条（仅暴露可疑碎片时显示） -->
+        <div class="evidence-chip" id="evidence-chip" style="display:none"></div>
+        <div id="ai-status" style="text-align:center;font-size:11px;color:rgba(7,193,96,.7);padding:4px 0;display:none">
+          🤖 AI 对话模式 · 输入任意文字，角色会实时回应
+        </div>
+      </div>
 
       <nav class="navbar">
         <button class="nav-item" id="nav-conv"><span class="ic">💬</span>对话</button>
@@ -221,13 +470,27 @@
 
     <div id="toast"></div>
 
+    <!-- M1.2 模拟演示水印（全局固定·非遮挡） -->
+    <div class="sim-watermark-bg" id="sim-watermark-bg"><span>模拟演示 反诈教育<br/>模拟演示 反诈教育<br/>模拟演示 反诈教育</span></div>
+    <div class="sim-watermark" id="sim-watermark"><b>⚠ 模拟演示 · 反诈教育</b> · 剧情虚构，切勿模仿</div>
+
+    <!-- M1.3 呼吸环节（幕间缓冲页） -->
+    <div class="breath-screen" id="breath-screen">
+      <div class="breath-ring" id="breath-ring">跟着一起呼吸</div>
+      <div class="breath-title" id="breath-title">停一下，深呼吸</div>
+      <div class="breath-text" id="breath-text">吸气……4 秒。屏住……2 秒。呼气……6 秒。</div>
+      <div class="breath-safe">这只是一场模拟，你是安全的。</div>
+      <button class="breath-continue" id="breath-continue">我准备好了，继续 →</button>
+      <button class="breath-exit" id="breath-exit">我想退出</button>
+    </div>
+
     <!-- 开场警示 -->
     <div class="warn-screen" id="warn-screen">
       <div class="warn-inner">
         <div class="kicker">异 次 元 梦 想 局</div>
         <h1>你的任务，<br/>比骗局更危险</h1>
         <p class="sub">一款任务驱动的反诈沉浸式模拟器</p>
-        <p>你将被随机分配一个身份——卧底、记者、志愿者、普通网友……并领到一个<b>必须与骗子接触</b>的任务。挑战不是“识破”，而是<b>“在完成任务的同时不被骗”</b>。</p>
+        <p>你将以一个<b>必须与骗子接触</b>的身份登场——卧底、记者、志愿者、普通网友……挑战不是“识破”，而是<b>“在完成任务的同时不被骗”</b>。完整五幕：希望 → 崩塌 → 废墟 → 回放 → 盾牌。</p>
         <div class="warn-box">
           <p>· 本游戏包含诈骗场景模拟，所有人物、情节均为虚构演示。</p>
           <p>· 全程不会要求你输入任何真实个人信息。</p>
@@ -237,8 +500,80 @@
         <p class="age">适合 16 岁以上人群。你即将经历的，是别人真实发生过的人生。</p>
         <button class="agree" id="warn-agree">领取我的身份，开始任务</button>
         <button class="disagree" id="warn-disagree">暂不开始</button>
+        <button class="drill-btn" id="warn-drill">🎯 单人反诈演练（十类高发骗局独立体验）</button>
+        <button class="disagree" id="warn-gallery-btn" style="background:#3a3a5a">🏛 结局图鉴</button>
       </div>
     </div>
+
+    <!-- 单人反诈演练 · 场景选择 -->
+    <div class="overlay" id="scenario-picker-overlay"><div class="sheet idselect-sheet">
+      <div class="idselect-hd">🎯 选择要演练的骗局类型</div>
+      <div class="idselect-list" id="scenario-picker-list"></div>
+      <button class="disagree" id="scenario-picker-close">返回</button>
+    </div></div>
+
+    <!-- 单人反诈演练 · 复盘结果 -->
+    <div class="overlay" id="scenario-result-overlay"><div class="sheet shield-card">
+      <div class="shield-hd" id="scen-result-hd">演练复盘</div>
+      <div class="scen-debrief" id="scen-result-debrief"></div>
+      <!-- M4.1 隐藏结局「反杀」徽标 -->
+      <div class="counters-badge" id="scen-counters-badge" style="display:none"></div>
+      <div class="pitfall-report" id="pitfall-report-scen"></div>
+      <div style="display:flex;gap:10px;margin-top:14px">
+        <button class="btn" id="evidence-open" style="flex:1;background:#7B5CFF">🗂 证据墙</button>
+        <button class="btn" id="scen-replay-btn" style="flex:1;background:#07C160">🔁 再来一次</button>
+        <button class="btn" id="scen-back-btn" style="flex:1;background:#3a4a6a">📋 演练列表</button>
+      </div>
+    </div></div>
+
+    <!-- M4.1 证据墙 -->
+    <div class="overlay" id="evidence-overlay"><div class="sheet ev-sheet">
+      <div class="ev-head">
+        <span>🗂 证据墙</span>
+        <button class="ev-close" id="evidence-close">✕</button>
+      </div>
+      <div class="ev-body" id="evidence-grid"></div>
+    </div></div>
+
+    <!-- M4.3 快速模式 -->
+    <div class="overlay" id="quick-overlay"><div class="quick-screen">
+      <div class="quick-top">
+        <div class="quick-hd" id="quick-hd">⚡ 快速模式</div>
+        <button class="quick-exit" id="quick-exit">✕</button>
+      </div>
+      <div class="quick-stats" id="quick-stats">
+        <div class="qs-pill" id="quick-trust"><span class="qs-lab">信任</span><span class="qs-val">50</span><div class="qs-track"><div class="qs-fill" style="width:50%"></div></div></div>
+        <div class="qs-pill" id="quick-exposure"><span class="qs-lab">暴露</span><span class="qs-val">20</span><div class="qs-track"><div class="qs-fill" style="width:20%"></div></div></div>
+        <div class="qs-pill" id="quick-suspicion"><span class="qs-lab">怀疑</span><span class="qs-val">30</span><div class="qs-track"><div class="qs-fill" style="width:30%"></div></div></div>
+        <div class="qs-pill" id="quick-conscience"><span class="qs-lab">良心</span><span class="qs-val">50</span><div class="qs-track"><div class="qs-fill" style="width:50%"></div></div></div>
+      </div>
+      <div class="quick-card-wrap">
+        <div class="quick-card" id="quick-card">
+          <div class="quick-phase" id="quick-phase"></div>
+          <div class="quick-line" id="quick-line"></div>
+        </div>
+        <div class="quick-left" id="quick-left">← 谨慎</div>
+        <div class="quick-right" id="quick-right">配合 →</div>
+      </div>
+      <div class="quick-hint">← 左滑/点左侧 = 谨慎　|　右滑/点右侧 = 配合 →</div>
+    </div></div>
+
+    <!-- M4.3 快速模式结果 -->
+    <div class="overlay" id="quick-result-overlay"><div class="sheet quick-result-card">
+      <div class="qr-hd">⚡ 快速模式 · 反骗指数</div>
+      <div class="qr-idx" id="quick-result-idx">0</div>
+      <div class="qr-verdict" id="quick-result-verdict"></div>
+      <div class="qr-detail" id="quick-result-detail"></div>
+      <button class="btn" id="quick-result-back" style="background:#3a4a6a;margin-top:16px">📋 返回演练列表</button>
+    </div></div>
+
+    <!-- 身份选择（含解锁） -->
+    <div class="overlay" id="idselect-overlay"><div class="sheet idselect-sheet">
+      <h2>🎭 选择你的身份</h2>
+      <p style="font-size:12px;color:var(--tx2);text-align:center;margin-bottom:12px">完成指定线可解锁新身份（进度自动保存）</p>
+      <div id="idselect-list"></div>
+      <button class="btn gray" id="idselect-close">返回</button>
+    </div></div>
 
     <!-- 身份卡 -->
     <div class="overlay" id="identity-overlay"><div class="sheet idcard">
@@ -261,7 +596,7 @@
         <div class="id-oath" id="idcard-oath"></div>
       </div>
       <button class="btn" id="idcard-start">接受任务，进入</button>
-      <button class="btn ghost" id="idcard-reroll">换一个身份（体验用）</button>
+      <button class="btn ghost" id="idcard-reroll">换一个身份</button>
     </div></div>
 
     <!-- 对话列表 -->
@@ -293,26 +628,65 @@
       <button class="btn gray" id="profile-close">关闭</button>
     </div></div>
 
-    <!-- 结局 -->
-    <div class="overlay" id="ending-overlay"><div class="sheet">
-      <div class="ending-hd">
-        <span class="ending-badge" id="ending-badge">任务完成</span>
-        <div class="ending-title" id="ending-title"></div>
-      </div>
-      <div class="ending-score" id="ending-score">— 分</div>
-      <div class="ending-stats" id="ending-stats"></div>
-      <div class="ending-text" id="ending-text"></div>
-      <div class="ending-review" id="ending-review"></div>
-      <button class="btn" id="ending-timeline" style="background:#2C7BE5;">🕐 查看任务回放</button>
-      <button class="btn" id="ending-toolbox" style="background:#07C160;">🛡 打开防骗工具箱</button>
-      <button class="btn gray" id="ending-restart">领取新身份，再来一局</button>
+    <!-- 第三幕·废墟 -->
+    <div class="overlay" id="ruins-overlay"><div class="sheet">
+      <h2>🏚 第三幕 · 废墟</h2>
+      <p style="font-size:13px;color:var(--tx2);text-align:center;margin-bottom:6px">事情已经发生了。现在，你能做这四件事——</p>
+      <div class="ruins-list" id="ruins-list"></div>
+      <button class="btn" id="ruins-continue" style="background:#DC143C">我做完该做的了，看看发生了什么 →</button>
+      <button class="btn gray" id="ruins-close">稍后</button>
     </div></div>
 
-    <!-- 时间线 -->
-    <div class="overlay" id="timeline-overlay"><div class="sheet">
-      <h2>🕐 任务回放</h2>
-      <div id="timeline-list"></div>
-      <button class="btn gray" id="timeline-close">返回</button>
+    <!-- 第四幕·回放 -->
+    <div class="overlay" id="replay-overlay"><div class="sheet">
+      <h2>🕐 第四幕 · 回放</h2>
+      <div class="replay-end">
+        <div class="rt" id="replay-end-title"></div>
+        <div class="rx" id="replay-end-text"></div>
+        <div class="rr" id="replay-end-review"></div>
+      </div>
+      <h2 style="font-size:15px">📜 你的故事时间线</h2>
+      <div id="timeline-list" style="margin:8px 0 12px"></div>
+      <h2 style="font-size:15px">🦋 蝴蝶效应 · 你的关键抉择</h2>
+      <div id="butterfly-list" class="butterfly-list"></div>
+      <button class="btn" id="parallel-btn" style="background:#8E44AD">🌀 平行宇宙：如果当时你这样说……</button>
+      <button class="btn" id="replay-continue" style="background:#1E90FF">进入第五幕 · 盾牌 →</button>
+      <button class="btn gray" id="replay-close">返回</button>
+    </div></div>
+
+    <!-- 平行宇宙 -->
+    <div class="overlay" id="parallel-overlay"><div class="sheet">
+      <h2>🌀 平行宇宙</h2>
+      <div id="parallel-list"></div>
+      <div class="free-row fixed">
+        <input class="free-input" id="parallel-input" placeholder="如果当时你这样回复……"/>
+        <button class="free-send" id="parallel-send">生成</button>
+      </div>
+      <div id="parallel-result" style="margin-top:10px"></div>
+      <button class="btn gray" id="parallel-close" style="margin-top:12px">收起</button>
+    </div></div>
+
+    <!-- 第五幕·盾牌 -->
+    <div class="overlay" id="shield-overlay"><div class="sheet">
+      <h2>🛡 第五幕 · 盾牌</h2>
+      <div class="shield-hd">
+        <div class="shield-title" id="shield-title"></div>
+        <div class="shield-sub" id="shield-sub"></div>
+      </div>
+      <div class="shield-score" id="shield-score">— 分</div>
+      <div class="shield-stars" id="shield-stars"></div>
+      <div class="shield-stats" id="shield-stats"></div>
+      <div class="shield-weak" id="shield-weak"></div>
+      <div class="shield-tips" id="shield-tips"></div>
+      <div class="pf-wrap" id="pitfall-report"></div>
+      <div class="disclaimer-box">
+        <b>免责声明：</b>本产品为反诈教育模拟演示，全部人物、情节、话术均为虚构，仅用于提升公众防范意识，切勿在现实中模仿任何诈骗行为。
+        根据《中华人民共和国刑法》第二百六十六条，诈骗公私财物数额较大的，处三年以下有期徒刑、拘役或者管制，并处或者单处罚金。
+        如现实中遭遇类似情况，请立即拨打 <b>110</b> 或全国反诈专线 <b>96110</b>；如感到心理不适，可拨打心理援助热线 <b>12320</b>。
+      </div>
+      <button class="btn" id="shield-toolbox-btn" style="background:#07C160;margin-top:12px">🛡 打开防骗工具箱</button>
+      <button class="btn" id="shield-gallery-btn" style="background:#7B5CFF;margin-top:8px">🏛 查看结局图鉴</button>
+      <button class="btn gray" id="shield-restart">换个身份，再来一局</button>
     </div></div>
 
     <!-- 工具箱 -->
@@ -324,9 +698,27 @@
       <button class="btn gray" id="toolbox-close">收起</button>
     </div></div>
 
+    <!-- M3 结局图鉴 -->
+    <div class="overlay" id="ending-gallery-overlay"><div class="sheet gallery-sheet">
+      <h2>🏛 结局图鉴</h2>
+      <p class="gallery-sub">6 身份 × 各自结局，已解锁的会显示复盘，未解锁的留白等你探索。多周目，解锁全部真相。</p>
+      <div id="ending-gallery-list" class="ending-gallery-list"></div>
+      <button class="btn gray" id="ending-gallery-close">收起</button>
+    </div></div>
+
   </div>
 
-  <script src="data7.js"></script>
-  <script src="app7.js"></script>
+  <script src="data8.js"></script>
+  <script src="scamTypes.js"></script>
+  <script src="report.js"></script>
+  <script src="scenarios.js"></script>
+  <script src="evidence.js"></script>
+  <script src="quickMode.js"></script>
+  <script src="weakness.js"></script>
+  <!-- M5：数据埋点 / 语音 / H5·小程序适配（须先于 app8.js 加载） -->
+  <script src="analytics.js"></script>
+  <script src="voice.js"></script>
+  <script src="adapter.js"></script>
+  <script src="app8.js"></script>
 </body>
 </html>
