@@ -67,7 +67,7 @@ const WEAKNESS_BY_IDENTITY = {
   lighthouse: "loneliness", // 志愿者：想被需要
   drift: "loneliness",  // 普通网友：渴望陪伴
   seeker: "fear",       // 寻人：怕朋友出事
-  mole: "impatience",   // 线人：要快出情报
+  teacher: "loneliness", // 退休教师：渴望陪伴
 };
 
 function assignWeakness(idKey) { return WEAKNESS_BY_IDENTITY[idKey] || "greed"; }
