@@ -200,6 +200,15 @@
     .iq-bar-text{font-weight:500;white-space:nowrap;}
     .iq-bar-track{flex:1;height:4px;background:rgba(255,255,255,.08);border-radius:999px;overflow:hidden;max-width:120px;}
     .iq-bar-track>i{display:block;height:100%;width:0%;background:var(--hl);border-radius:999px;transition:width .3s,background .3s;}
+    .iq-chips{display:flex;flex-wrap:wrap;gap:6px;padding:8px 12px 4px;max-height:88px;overflow-y:auto;}
+    .iq-chip{display:inline-flex;flex-direction:column;gap:2px;padding:4px 9px;border:1px solid var(--line);background:rgba(255,255,255,.04);border-radius:10px;cursor:pointer;transition:border-color .2s,background .2s;max-width:100%;}
+    .iq-chip:hover{border-color:var(--hl);}
+    .iq-chip-label{font-size:12px;font-weight:500;color:var(--tx1);line-height:1.2;}
+    .iq-chip-kw{font-size:10px;color:var(--tx2);line-height:1.25;}
+    .iq-chip.done{border-color:rgba(80,200,120,.5);background:rgba(80,200,120,.12);cursor:default;}
+    .iq-chip.done .iq-chip-label{color:#7ee0a0;}
+    .iq-chip.done .iq-chip-label::after{content:" ✓";color:#7ee0a0;font-weight:700;}
+    .iq-chip.done .iq-chip-kw{text-decoration:line-through;opacity:.55;}
     .bubble mark.break-keyword{background:rgba(255,107,53,.22);color:#FFD700;padding:0 2px;border-radius:2px;font-weight:500;}
     .msg-body .break-badge{display:inline-block;background:rgba(220,20,60,.15);color:#ff6b6b;border:1px solid rgba(220,20,60,.4);font-size:10px;padding:1px 6px;border-radius:999px;margin:3px 0 0 8px;font-weight:500;vertical-align:middle;animation:breakPulse .6s ease;}
     @keyframes breakPulse{0%{transform:scale(.6);opacity:0;}50%{transform:scale(1.15);}100%{transform:scale(1);opacity:1;}}
@@ -680,6 +689,7 @@
       </div>
 
       <div class="chat-area" id="chat-area"></div>
+      <div class="iq-chips" id="iq-chips" style="display:none"></div>
       <div class="options-bar" id="options-bar"></div>
       <div class="options-bar" id="options-bar"></div>
 

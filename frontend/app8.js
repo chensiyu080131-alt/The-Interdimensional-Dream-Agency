@@ -259,15 +259,43 @@ function renderInterrogationBar(npcKey) {
   if (!actor || (actor.type !== "target" && actor.type !== "accomplice")) { bar.style.display = "none"; return; }
   const p = getBreakProgress(npcKey);
   bar.style.display = "flex";
+  const revealed = S.accused && S.accused[npcKey];
   if (txt) {
-    txt.textContent = "破绽 " + p.count + "/" + p.threshold;
-    txt.style.color = p.count >= p.threshold ? "#ff6b6b" : "var(--tx2)";
+    txt.textContent = revealed ? "已揭露 ✓" : ("破绽 " + p.count + "/" + p.threshold);
+    txt.style.color = revealed ? "#7ee0a0" : (p.count >= p.threshold ? "#ff6b6b" : "var(--tx2)");
   }
   if (fill) {
-    const pct = Math.min(100, (p.count / p.threshold) * 100);
-    fill.style.width = pct + "%";
-    fill.style.background = p.count >= p.threshold ? "#DC143C" : "var(--hl)";
+    fill.style.width = (revealed ? 100 : Math.min(100, (p.count / p.threshold) * 100)) + "%";
+    fill.style.background = revealed ? "#50c878" : (p.count >= p.threshold ? "#DC143C" : "var(--hl)");
   }
+}
+
+/** 渲染输入框上方的「破绽方向」提示 chip：给玩家方向感，命中后亮起 */
+function renderInterrogationChips(npcKey) {
+  const box = $("iq-chips"); if (!box) return;
+  if (!npcKey) { box.style.display = "none"; box.innerHTML = ""; return; }
+  const actor = ACTORS[npcKey];
+  const cfg = INTERROGATION.breaks[npcKey];
+  if (!actor || (actor.type !== "target" && actor.type !== "accomplice") || !cfg || !cfg.length) {
+    box.style.display = "none"; box.innerHTML = ""; return;
+  }
+  box.style.display = "flex";
+  const found = (S.interrogation[npcKey] && S.interrogation[npcKey].hits) || [];
+  const foundIds = new Set(found.map(h => h.id));
+  box.innerHTML = "";
+  cfg.forEach(b => {
+    const done = foundIds.has(b.id);
+    const chip = document.createElement("div");
+    chip.className = "iq-chip" + (done ? " done" : "");
+    chip.innerHTML = '<span class="iq-chip-label">' + b.label + '</span><span class="iq-chip-kw">' + b.keywords.join(" · ") + '</span>';
+    if (!done) {
+      chip.title = "试着从「" + b.label + "」方向追问（点击给我提示）";
+      chip.addEventListener("click", () => toast("提示：可从「" + b.label + "」方向追问 TA"));
+    } else {
+      chip.title = "已挖出此破绽 ✓";
+    }
+    box.appendChild(chip);
+  });
 }
 
 /** 获取指定 NPC 在后端的人设 key */
@@ -1184,8 +1212,9 @@ function openConversation(key, silent) {
   $("chat-av").style.background = a.portrait ? "transparent" : a.color;
   // V9.2 切换对话时同步标记按钮状态
   updateAccuseBadge();
-  // V9.2+ 审讯进度条
+  // V9.2+ 审讯进度条 + 破绽方向 chip
   renderInterrogationBar(key);
+  renderInterrogationChips(key);
   const area = $("chat-area");
   area.innerHTML = "";
   // NPC 切换 → 更新场景条
@@ -1609,6 +1638,7 @@ async function handleFreeText(text, node) {
   audioSFX("send");
   if (_iqNew.length) {
     renderInterrogationBar(_iqKey);
+    renderInterrogationChips(_iqKey);
     _iqNew.forEach((b, i) => setTimeout(() => toast("命中破绽：" + b.label), 200 + i * 350));
   }
   // 本轮是否触发破绽（NPC 回答气泡加角标）
