@@ -10,6 +10,22 @@
   let autoRead = localStorage.getItem("fanzha_autoread") === "1";
   let speaking = false;
   let currentAudio = null;
+  let _fallbackWarned = false;
+
+  /* 真实语音失败时给玩家一个「可见原因」，而不是静默回退（之前听感无变化、无提示） */
+  function notifyTTSFallback(detail) {
+    if (_fallbackWarned) return;
+    _fallbackWarned = true;
+    let reason = "网络或服务异常";
+    if (detail && /451/.test(detail)) reason = "仅限中国大陆网络(HTTP 451)";
+    else if (detail && /401|403|unauthorized|Forbidden/i.test(detail)) reason = "密钥无效/未授权";
+    else if (detail && /4\d\d|5\d\d/.test(detail)) reason = "服务返回 " + detail;
+    try {
+      if (typeof window !== "undefined" && typeof window.toast === "function") {
+        window.toast("真实语音未启用：" + reason + "，已用浏览器原生语音");
+      }
+    } catch (e) {}
+  }
 
   /* ⚠️ 安全须知（路径①·浏览器直连）—— 请务必阅读
    * 以下 Step Fun API Key 会随前端代码**打包进静态站点**，在 GitHub Pages 等公开托管下
@@ -218,7 +234,9 @@
         speaking = false;
         return;
       } catch (e) {
-        console.warn("[TTS] 阶跃直连失败，回退浏览器原生：", e && e.message ? e.message : e);
+        const d = e && e.message ? e.message : String(e);
+        notifyTTSFallback(d);
+        console.warn("[TTS] 阶跃直连失败，回退浏览器原生：", d);
       }
     } else if (endpoint) {
       // 路径②：后端代理 /api/tts
@@ -227,7 +245,9 @@
         speaking = false;
         return;
       } catch (e) {
-        console.warn("[TTS] 云端语音失败，回退浏览器原生：", e && e.message ? e.message : e);
+        const d = e && e.message ? e.message : String(e);
+        notifyTTSFallback(d);
+        console.warn("[TTS] 云端语音失败，回退浏览器原生：", d);
       }
     }
     // 回退：浏览器原生 speechSynthesis
