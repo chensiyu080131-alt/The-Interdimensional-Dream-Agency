@@ -196,6 +196,13 @@
     .accuse-badge.accused{background:rgba(220,20,60,.25);border-color:#DC143C;color:#fff;}
     .accuse-badge.accused .acc-tag::before{content:"✓ ";}
     .accuse-badge.accused .acc-tag::after{content:" 已标记";}
+    .iq-bar{display:flex;align-items:center;gap:6px;margin-top:5px;font-size:11px;color:var(--tx2);line-height:1;}
+    .iq-bar-text{font-weight:500;white-space:nowrap;}
+    .iq-bar-track{flex:1;height:4px;background:rgba(255,255,255,.08);border-radius:999px;overflow:hidden;max-width:120px;}
+    .iq-bar-track>i{display:block;height:100%;width:0%;background:var(--hl);border-radius:999px;transition:width .3s,background .3s;}
+    .bubble mark.break-keyword{background:rgba(255,107,53,.22);color:#FFD700;padding:0 2px;border-radius:2px;font-weight:500;}
+    .msg-body .break-badge{display:inline-block;background:rgba(220,20,60,.15);color:#ff6b6b;border:1px solid rgba(220,20,60,.4);font-size:10px;padding:1px 6px;border-radius:999px;margin:3px 0 0 8px;font-weight:500;vertical-align:middle;animation:breakPulse .6s ease;}
+    @keyframes breakPulse{0%{transform:scale(.6);opacity:0;}50%{transform:scale(1.15);}100%{transform:scale(1);opacity:1;}}
     /* 联系人列表里的标记角标 */
     .conv-accused{position:absolute;top:-4px;right:-4px;font-size:13px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.5));}
     .conv-av{position:relative;}
@@ -656,7 +663,11 @@
 
       <div class="chat-head">
         <div class="chat-av" id="chat-av">浩</div>
-        <div style="flex:1;min-width:0"><div class="ct" id="chat-title">张浩</div><div class="cs" id="chat-sub"></div></div>
+        <div style="flex:1;min-width:0">
+          <div class="ct" id="chat-title">张浩</div>
+          <div class="cs" id="chat-sub"></div>
+          <div class="iq-bar" id="iq-bar" style="display:none"><span class="iq-bar-text" id="iq-bar-text">破绽 0/3</span><span class="iq-bar-track"><i id="iq-bar-fill"></i></span></div>
+        </div>
         <button class="switcher-badge" id="switcher-badge" title="更换聊天马甲">
           <span class="sw-av" id="sw-av"></span>
           <span class="sw-tag">🎭 换马甲</span>

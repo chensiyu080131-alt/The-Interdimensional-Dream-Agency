@@ -151,6 +151,8 @@ function getAISystemPrompt(npcKey) {
   }
   // V9.2 换号察觉：把"对方换了账号 / 累计换号次数 / 当前怀疑度"告诉 AI，让回复体现怀疑
   base += buildMaskSwitchContext(npcKey);
+  // V9.2+ 审讯进度：把"已挖出的破绽"告诉 AI，让骗子表现更自然
+  base += buildInterrogationContext(npcKey);
   return base;
 }
 
@@ -188,6 +190,84 @@ function buildMaskSwitchContext(npcKey) {
     "请根据这个怀疑程度，在你的回复里自然地体现——可以试探性问一句（「咦你这号怎么换了？」）、" +
     "语气变冷淡、或者直接质问。怀疑越高，反应越激烈；极度怀疑时应拒绝继续聊、甚至扬言拉黑。" +
     "绝对不要假装没注意到账号变化。";
+}
+
+/* ---------------- 审讯质询·破绽点（V9.2+ 探案创意） ---------------- */
+/** 正则转义 */
+function reEsc(s) { return String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+/** 玩家问句对指定 NPC 命中哪些破绽点（不修改状态） */
+function queryInterrogation(npcKey, text) {
+  const cfg = INTERROGATION.breaks[npcKey];
+  if (!cfg || !text) return [];
+  const hits = [];
+  cfg.forEach(b => {
+    const re = new RegExp(b.keywords.map(reEsc).join("|"));
+    if (re.test(text)) hits.push(b);
+  });
+  return hits;
+}
+/** 记录破绽（去重），返回本轮新命中的破绽 */
+function recordBreak(npcKey, hits) {
+  if (!hits || !hits.length) return [];
+  S.interrogation = S.interrogation || {};
+  S.interrogation[npcKey] = S.interrogation[npcKey] || { hits: [], count: 0 };
+  const s = S.interrogation[npcKey];
+  const newly = [];
+  hits.forEach(b => {
+    if (!s.hits.some(h => h.id === b.id)) { s.hits.push(b); s.count++; newly.push(b); }
+  });
+  return newly;
+}
+/** 取得破绽进度 { count, total, threshold } */
+function getBreakProgress(npcKey) {
+  S.interrogation = S.interrogation || {};
+  const s = S.interrogation[npcKey] || { count: 0 };
+  const cfg = INTERROGATION.breaks[npcKey] || [];
+  return { count: s.count, total: Math.max(cfg.length, INTERROGATION.threshold), threshold: INTERROGATION.threshold };
+}
+/** 是否可标记（仅 target/accomplice 需破绽达标） */
+function canAccuse(npcKey) {
+  if (!npcKey) return { ok: true, reason: "" };
+  const actor = ACTORS[npcKey];
+  if (!actor) return { ok: true, reason: "" };
+  if (actor.type === "target" || actor.type === "accomplice") {
+    const p = getBreakProgress(npcKey);
+    if (p.count < p.threshold) return { ok: false, reason: "破绽 " + p.count + "/" + p.threshold + "，还差 " + (p.threshold - p.count) + " 个才能标记" };
+  }
+  return { ok: true, reason: "" };
+}
+/** 构造审讯上下文（注入 AI system prompt） */
+function buildInterrogationContext(npcKey) {
+  if (!npcKey) return "";
+  const actor = ACTORS[npcKey];
+  if (!actor || (actor.type !== "target" && actor.type !== "accomplice")) return "";
+  const p = getBreakProgress(npcKey);
+  const hitLabels = (S.interrogation[npcKey] && S.interrogation[npcKey].hits || []).map(h => h.label).join("、");
+  if (p.count === 0) return "";
+  let levelDesc = "";
+  if (p.count >= p.threshold) levelDesc = "你已被挖出全部关键破绽，即将彻底露馅——应明显慌张、语无伦次或试图中止对话。";
+  else if (p.count >= 2) levelDesc = "你的话术已开始露出明显破绽，语气不稳、出现前后矛盾，被问到关键点会回避。";
+  else levelDesc = "你开始感到一丝不安，对方问的问题太专业了。";
+  return "\n【审讯进度】对方已挖出你的 " + p.count + "/" + p.threshold + " 个破绽（" + hitLabels + "）。" + levelDesc + "请在回复中自然体现。";
+}
+/** 渲染聊天顶栏的破绽进度条 */
+function renderInterrogationBar(npcKey) {
+  const bar = $("iq-bar"); if (!bar) return;
+  const txt = $("iq-bar-text"); const fill = $("iq-bar-fill");
+  if (!npcKey) { bar.style.display = "none"; return; }
+  const actor = ACTORS[npcKey];
+  if (!actor || (actor.type !== "target" && actor.type !== "accomplice")) { bar.style.display = "none"; return; }
+  const p = getBreakProgress(npcKey);
+  bar.style.display = "flex";
+  if (txt) {
+    txt.textContent = "破绽 " + p.count + "/" + p.threshold;
+    txt.style.color = p.count >= p.threshold ? "#ff6b6b" : "var(--tx2)";
+  }
+  if (fill) {
+    const pct = Math.min(100, (p.count / p.threshold) * 100);
+    fill.style.width = pct + "%";
+    fill.style.background = p.count >= p.threshold ? "#DC143C" : "var(--hl)";
+  }
 }
 
 /** 获取指定 NPC 在后端的人设 key */
@@ -611,6 +691,7 @@ function startGame() {
   // V9.2 标记骗子机制：记录玩家指控 { convKey: true }，结局时统计识别准确率
   S.accused = {};
   S.revealed = {}; // V9.2 沉浸模式：每局重置已揭露的骗子
+  S.interrogation = {}; // V9.2+ 审讯进度：{ npcKey: { hits:[{id,label}], count } }
   S.chatIdentity = (MASIAS[S.idKey] && MASIAS[S.idKey][0]) ? MASIAS[S.idKey][0].key : null;
   S.maskSwitchCount = {}; S.maskUsedPerNPC = {}; S.totalMaskSwitches = 0; S.maskSwitchBlocked = false;
 
@@ -1103,6 +1184,8 @@ function openConversation(key, silent) {
   $("chat-av").style.background = a.portrait ? "transparent" : a.color;
   // V9.2 切换对话时同步标记按钮状态
   updateAccuseBadge();
+  // V9.2+ 审讯进度条
+  renderInterrogationBar(key);
   const area = $("chat-area");
   area.innerHTML = "";
   // NPC 切换 → 更新场景条
@@ -1517,8 +1600,19 @@ function renderOptions(node) {
 
 /* ---------------- 自由文本（反卧底 + AI 生成） ---------------- */
 async function handleFreeText(text, node) {
-  pushMessageFinal(S.activeConv, "me", text, null);
+  const _iqKey = S.activeConv;
+  // V9.2+ 审讯：先匹配破绽关键词 + 累积 + 高亮玩家问句
+  const _iqHits = queryInterrogation(_iqKey, text);
+  const _iqNew = recordBreak(_iqKey, _iqHits);
+  const _meOpts = _iqHits.length ? { highlights: _iqHits.reduce((a, h) => a.concat(h.keywords), []) } : undefined;
+  pushMessageFinal(_iqKey, "me", text, null, _meOpts);
   audioSFX("send");
+  if (_iqNew.length) {
+    renderInterrogationBar(_iqKey);
+    _iqNew.forEach((b, i) => setTimeout(() => toast("命中破绽：" + b.label), 200 + i * 350));
+  }
+  // 本轮是否触发破绽（NPC 回答气泡加角标）
+  const _aiOpts = _iqNew.length ? { broke: true } : undefined;
   const target = ACTORS[S.activeConv];
   let added = 0, warnLine = null;
   const isTarget = target && (target.type === "target" || target.type === "accomplice");
@@ -1552,18 +1646,18 @@ async function handleFreeText(text, node) {
   setTimeout(() => {
     if (warnLine) {
       // 命中反卧底敏感词 → NPC 警觉回应（优先于 AI）
-      pushMessageFinal(S.activeConv, "ai", warnLine, "反卧底·警觉");
+      pushMessageFinal(S.activeConv, "ai", warnLine, "反卧底·警觉", _aiOpts);
       setTimeout(() => checkExposed(), 400);
       if (S.ending) return;
     } else if (aiReply && aiReply.reply) {
       // AI 成功生成回复 → 使用 AI 回复
       const phase = aiReply.stage ? "AI·" + aiReply.stage : "AI 生成";
-      pushMessageFinal(S.activeConv, "ai", aiReply.reply, phase);
+      pushMessageFinal(S.activeConv, "ai", aiReply.reply, phase, _aiOpts);
       S.history.push({ day: S.day, who: target ? target.name : "NPC", phase, text: aiReply.reply });
     } else if (shouldUseAI) {
       // AI 不可用 → 使用预设兜底回复
       const fallback = aiFallbackReply(S.activeConv, text);
-      pushMessageFinal(S.activeConv, "ai", fallback, "预设兜底");
+      pushMessageFinal(S.activeConv, "ai", fallback, "预设兜底", _aiOpts);
     }
 
     // 找到下一个剧情节点
@@ -1577,7 +1671,7 @@ async function handleFreeText(text, node) {
 
       if (!warnLine && !aiReply && isTarget) {
         // 安全回复 + 无AI → 兜底过渡
-        pushMessageFinal(S.activeConv, "ai", "嗯，明白了。那咱们接着说正事——", null);
+        pushMessageFinal(S.activeConv, "ai", "嗯，明白了。那咱们接着说正事——", null, _aiOpts);
         showNextHint(cont.next);
       } else if (!warnLine && !isTarget && !isInformant && !aiReply) {
         // 非骗子/线人 NPC，无 AI → 使用上下文回复后推进
@@ -1892,15 +1986,17 @@ function renderProfile() {
 }
 
 /* ---------------- 消息 & 气泡 ---------------- */
-function pushMessageFinal(convKey, who, text, phase) {
+function pushMessageFinal(convKey, who, text, phase, opts) {
+  opts = opts || {};
   S.convs[convKey].messages.push({ who, text, psy: phase });
-  if (convKey === S.activeConv) appendBubble(who, text, phase, true, true);
+  if (convKey === S.activeConv) appendBubble(who, text, phase, true, true, opts);
   // V9.2 TTS：NPC 新消息 + 开启了自动朗读 + 当前正在看这个对话 → 自动朗读
   if (who === 'ai' && convKey === S.activeConv && window.Speech && Speech.isAutoRead && Speech.isAutoRead()) {
     Speech.speak(text, convKey);
   }
 }
-function appendBubble(who, text, phase, scroll, animate) {
+function appendBubble(who, text, phase, scroll, animate, opts) {
+  opts = opts || {};
   const area = $("chat-area");
   const m = document.createElement("div");
   m.className = "msg " + who + (animate ? " anim" : "");
@@ -1917,9 +2013,17 @@ function appendBubble(who, text, phase, scroll, animate) {
     const avChar = id ? (id.avatar || id.name[0]) : '我';
     avHTML = `<div class="msg-av" style="background:${avColor}">${avChar}</div>`;
   }
+  // 关键词高亮（玩家问句命中破绽关键词）
+  let displayText = text;
+  if (opts.highlights && opts.highlights.length) {
+    const re = new RegExp("(" + opts.highlights.map(reEsc).join("|") + ")", "gi");
+    displayText = displayText.replace(re, '<mark class="break-keyword">$1</mark>');
+  }
+  // 破绽角标（NPC 回答时本轮触发破绽）
+  const breakBadge = (who === 'ai' && opts.broke) ? '<span class="break-badge">破绽 +1</span>' : '';
   // 消息体
   const timeStr = new Date().toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit'});
-  m.innerHTML = `${avHTML}<div class="msg-body"><div class="bubble">${text}</div><span class="msg-time">${timeStr}</span>${who === 'ai' && text ? createEvidenceCollectBtn(text) : ''}</div>`;
+  m.innerHTML = `${avHTML}<div class="msg-body"><div class="bubble">${displayText}</div>${breakBadge}<span class="msg-time">${timeStr}</span>${who === 'ai' && text ? createEvidenceCollectBtn(text) : ''}</div>`;
   area.appendChild(m);
   if (scroll) area.scrollTop = area.scrollHeight;
 }
@@ -2502,6 +2606,14 @@ function toggleAccuse() {
   if (!wasAccused) {
     // 本次是"标记为骗子"
     if (actor.type === "target" || actor.type === "accomplice") {
+      // V9.2+ 审讯：破绽未达标 → 提示玩家继续提问
+      const acc = canAccuse(key);
+      if (!acc.ok) {
+        toast("破绽不足：" + acc.reason);
+        S.accused[key] = false; // 不标记
+        updateAccuseBadge();
+        return;
+      }
       const bonus = 8;
       S.awareness = Math.min(100, (S.awareness || 0) + bonus);
       // V9.2 沉浸模式：标对骗子 → 揭露真实身份 + 刷新顶栏显示
@@ -2541,6 +2653,8 @@ function updateAccuseBadge() {
   const accused = S.accused && S.activeConv && S.accused[S.activeConv];
   if (accused) badge.classList.add("accused");
   else badge.classList.remove("accused");
+  // V9.2+ 同步审讯进度条
+  renderInterrogationBar(S.activeConv);
 }
 
 $("convlist-close").addEventListener("click", () => hide("convlist-overlay"));
