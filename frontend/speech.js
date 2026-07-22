@@ -152,6 +152,36 @@
     return null;
   }
 
+  /* 播放 wav blob：自动处理浏览器「自动播放策略」拦截——
+   * 若 play() 被拦（无用户手势），挂到首次 pointerdown/keydown 再播；最多等 8s，超时则失败回退原生。 */
+  function playAudio(url) {
+    return new Promise((resolve, reject) => {
+      const audio = new Audio(url);
+      currentAudio = audio;
+      let settled = false;
+      const cleanup = () => {
+        try { document.removeEventListener("pointerdown", onGesture); } catch (e) {}
+        try { document.removeEventListener("keydown", onGesture); } catch (e) {}
+        audio.onended = audio.onerror = null;
+        currentAudio = null;
+      };
+      const ok = () => { if (settled) return; settled = true; cleanup(); resolve(true); };
+      const fail = () => { if (settled) return; settled = true; cleanup(); reject(new Error("audio play error")); };
+      const onGesture = () => { if (audio.paused) audio.play().catch(() => {}); };
+      audio.onended = ok;
+      audio.onerror = fail;
+      audio.play().then(() => {
+        document.addEventListener("pointerdown", onGesture);
+        document.addEventListener("keydown", onGesture);
+      }).catch(() => {
+        // 自动播放被拦截：等用户首次交互再播
+        document.addEventListener("pointerdown", onGesture);
+        document.addEventListener("keydown", onGesture);
+        setTimeout(fail, 8000);
+      });
+    });
+  }
+
   async function playCloudTTS(endpoint, text, opts) {
     opts = opts || {};
     const r = await fetch(endpoint, {
@@ -173,13 +203,11 @@
     const blob = await r.blob();
     if (!blob || !blob.size) throw new Error("empty audio");
     const url = URL.createObjectURL(blob);
-    const audio = new Audio(url);
-    currentAudio = audio;
-    return await new Promise((resolve, reject) => {
-      audio.onended = () => { try { URL.revokeObjectURL(url); } catch (e) {} currentAudio = null; resolve(true); };
-      audio.onerror = () => { try { URL.revokeObjectURL(url); } catch (e) {} currentAudio = null; reject(new Error("audio play error")); };
-      audio.play().catch(reject);
-    });
+    try {
+      await playAudio(url);
+    } finally {
+      try { URL.revokeObjectURL(url); } catch (e) {}
+    }
   }
 
   /* 路径①：浏览器直连 Step Fun（真实 stepaudio 语音）。CORS 开放，任意静态托管可用。
@@ -210,13 +238,11 @@
     const blob = await r.blob();
     if (!blob || !blob.size) throw new Error("empty audio");
     const url = URL.createObjectURL(blob);
-    const audio = new Audio(url);
-    currentAudio = audio;
-    return await new Promise((resolve, reject) => {
-      audio.onended = () => { try { URL.revokeObjectURL(url); } catch (e) {} currentAudio = null; resolve(true); };
-      audio.onerror = () => { try { URL.revokeObjectURL(url); } catch (e) {} currentAudio = null; reject(new Error("audio play error")); };
-      audio.play().catch(reject);
-    });
+    try {
+      await playAudio(url);
+    } finally {
+      try { URL.revokeObjectURL(url); } catch (e) {}
+    }
   }
 
   Speech.ttsSupported = function () {
