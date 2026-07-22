@@ -34,7 +34,7 @@
     else if (/401|403|unauthorized|Forbidden/i.test(d)) reason = "密钥无效/未授权";
     else if (/4\d\d|5\d\d/.test(d)) reason = "服务返回 " + d.trim().slice(0, 100);
     else reason = "网络或服务异常" + (d ? "（" + d.trim().slice(0, 80) + "）" : "");
-    setTTSStatus("⚠️ 云端语音未启用：" + reason + " → 已用浏览器原生", "warn");
+    setTTSStatus("⚠️ 云端语音未启用：" + reason + " | 来源 " + (location && location.origin) + " → 已用浏览器原生", "warn");
     try {
       if (!_fallbackWarned && typeof window !== "undefined" && typeof window.toast === "function") {
         _fallbackWarned = true;
@@ -366,4 +366,35 @@
   Speech.isListening = function () { return recogActive; };
 
   window.Speech = Speech;
+
+  /* ---------- 加载时语音连通性自测（定位「真实语音未启用」根因） ---------- */
+  function ttsProbe() {
+    try {
+      if (typeof document === "undefined") return;
+      const origin = (location && location.origin) || "未知";
+      const endpoint = getCloudTTSEndpoint();
+      let mode;
+      if (endpoint === STEPFUN_TTS_MARKER) mode = "直连 stepfun（浏览器跨域会被挡→无真实语音）";
+      else if (endpoint) mode = "后端代理 " + endpoint;
+      else mode = "无云端（仅浏览器原生）";
+      setTTSStatus("语音来源：" + origin + " ｜ 模式：" + mode, "info");
+      // 后端代理：实际探测一次连通性，给出确定性结论
+      if (endpoint && endpoint !== STEPFUN_TTS_MARKER) {
+        fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: "连通性自测", voice: "zixinnansheng" }),
+        }).then(function (r) {
+          if (r.ok) setTTSStatus("✅ 后端代理可达（" + endpoint + "）→ 点🔊即可听到真实语音", "ok");
+          else setTTSStatus("⚠️ 后端代理返回 HTTP " + r.status + "（" + endpoint + "）", "warn");
+        }).catch(function (e) {
+          setTTSStatus("❌ 后端代理连不上（" + endpoint + "）：" + (e && e.message ? e.message : e) + " → 请确认页面来源是 http://localhost:3000", "warn");
+        });
+      }
+    } catch (e) {}
+  }
+  if (typeof document !== "undefined") {
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", ttsProbe);
+    else ttsProbe();
+  }
 })();
