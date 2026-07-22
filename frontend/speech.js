@@ -113,9 +113,10 @@
   function getCloudTTSEndpoint() {
     const h = location.hostname;
     if (h === "localhost" || h === "127.0.0.1") return "http://localhost:3000/api/tts";
-    // 生产环境：与 AI 后端同源（腾讯云 API 网关，大陆节点可调用 stepaudio）
-    const base = (typeof window !== "undefined" && window.__API_BASE) || "https://ai-d9gd4xji5de241243.apigw.tcloudbase.com";
-    return base.replace(/\/$/, "") + "/api/tts";
+    // 生产环境：若部署了大陆后端，在前端注入 window.__API_BASE 即可启用云端 stepaudio（密钥不暴露）。
+    // 未配置则不使用云端 TTS，直接回退浏览器原生语音（不暴露密钥、无无效网络请求）。
+    const base = (typeof window !== "undefined" && window.__API_BASE);
+    return base ? base.replace(/\/$/, "") + "/api/tts" : null;
   }
 
   async function playCloudTTS(endpoint, text, opts) {
