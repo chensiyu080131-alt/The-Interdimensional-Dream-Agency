@@ -11,6 +11,16 @@
   let speaking = false;
   let currentAudio = null;
 
+  /* ⚠️ 安全须知（路径①·浏览器直连）—— 请务必阅读
+   * 以下 Step Fun API Key 会随前端代码**打包进静态站点**，在 GitHub Pages 等公开托管下
+   * 任何人都能通过「查看网页源代码」提取并滥用（产生额度/费用风险，且 Key 无法区分调用方）。
+   * 生产环境强烈建议改用路径②：自建大陆后端持有 Key，前端注入 window.__API_BASE（代码已支持，密钥不暴露）。
+   * 若坚持直连，请使用可随时吊销的受限 Key，并在不再需要时立即到 Step Fun 控制台重置。
+   * 切换方式：把下面 STEPFUN_API_KEY 置空（或删除本段），改在页面注入 window.__API_BASE 即可无缝切到路径②。 */
+  const STEPFUN_API_KEY = "1Qm0asvKa3tCLPJY6cI5rxC5aZHEEIzznfnz8aUbicAMY3027fuoTX3038GE9HhAc";
+  const STEPFUN_TTS_URL = "https://api.stepfun.com/step_plan/v1/audio/speech";
+  const STEPFUN_TTS_MARKER = "__DIRECT_STEPFUN__";
+
   /* 各 NPC → 阶跃 stepaudio-2.5-tts「音色 + 人设 instruction」。
    * 关键：stepaudio-2.5-tts 是 Contextual TTS，必须靠 instruction（自然语言人设/情绪基调，≤200字）
    *       才能触发「呼吸感、轻重主次、情绪弧线」的真人级表达；只给 voice 会被退回平直机器腔（之前「古板」的根因）。
@@ -113,10 +123,13 @@
   function getCloudTTSEndpoint() {
     const h = location.hostname;
     if (h === "localhost" || h === "127.0.0.1") return "http://localhost:3000/api/tts";
-    // 生产环境：若部署了大陆后端，在前端注入 window.__API_BASE 即可启用云端 stepaudio（密钥不暴露）。
-    // 未配置则不使用云端 TTS，直接回退浏览器原生语音（不暴露密钥、无无效网络请求）。
+    // 路径②（推荐·安全）：部署了大陆后端 → 注入 window.__API_BASE，密钥在后端不暴露
     const base = (typeof window !== "undefined" && window.__API_BASE);
-    return base ? base.replace(/\/$/, "") + "/api/tts" : null;
+    if (base) return base.replace(/\/$/, "") + "/api/tts";
+    // 路径①（直连·密钥公开）：已内置 Step Fun Key → 浏览器直连 stepfun（CORS 开放，任意静态托管可用真实语音）
+    if (typeof STEPFUN_API_KEY === "string" && STEPFUN_API_KEY) return STEPFUN_TTS_MARKER;
+    // 两者皆无 → 不使用云端 TTS，回退浏览器原生语音
+    return null;
   }
 
   async function playCloudTTS(endpoint, text, opts) {
@@ -149,6 +162,42 @@
     });
   }
 
+  /* 路径①：浏览器直连 Step Fun（真实 stepaudio 语音）。CORS 开放，任意静态托管可用。
+   * 注意：Key 已随前端公开，调用方不可信；step_plan 档位仍需中国大陆 IP（非大陆返回 451 → 上层回退原生）。 */
+  async function playStepfunTTS(text, opts) {
+    opts = opts || {};
+    const r = await fetch(STEPFUN_TTS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + STEPFUN_API_KEY },
+      body: JSON.stringify({
+        model: "stepaudio-2.5-tts",
+        input: text,
+        voice: opts.voice || "vibrant-youth",
+        ...(opts.instruction ? { instruction: opts.instruction } : {}),
+        ...(opts.speed ? { speed: opts.speed } : {}),
+        ...(opts.volume ? { volume: opts.volume } : {}),
+        text_normalization: "enhanced", // 更自然的数字/单位/符号读法
+        sample_rate: 24000,
+        response_format: "wav",
+      }),
+    });
+    if (!r.ok) {
+      let msg = "";
+      try { const j = await r.json(); msg = j.error || JSON.stringify(j); } catch (e) { try { msg = await r.text(); } catch (_) {} }
+      throw new Error(msg || ("HTTP " + r.status));
+    }
+    const blob = await r.blob();
+    if (!blob || !blob.size) throw new Error("empty audio");
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    currentAudio = audio;
+    return await new Promise((resolve, reject) => {
+      audio.onended = () => { try { URL.revokeObjectURL(url); } catch (e) {} currentAudio = null; resolve(true); };
+      audio.onerror = () => { try { URL.revokeObjectURL(url); } catch (e) {} currentAudio = null; reject(new Error("audio play error")); };
+      audio.play().catch(reject);
+    });
+  }
+
   Speech.ttsSupported = function () {
     return !!(getCloudTTSEndpoint() || (window.speechSynthesis && window.SpeechSynthesisUtterance));
   };
@@ -158,17 +207,23 @@
     if (!text) return;
     speaking = true;
     const endpoint = getCloudTTSEndpoint();
-    if (endpoint) {
+    const cfg = STEPFUN_VOICE_MAP[npcKey] || STEPFUN_VOICE_MAP._default;
+    const revealed = (typeof S !== "undefined" && S.revealed && S.revealed[npcKey]);
+    const instruction = (revealed && cfg.revealedInstruction) ? cfg.revealedInstruction : (cfg.instruction || undefined);
+    const ttsOpts = { voice: cfg.voice, instruction, speed: cfg.speed, volume: cfg.volume };
+    if (endpoint === STEPFUN_TTS_MARKER) {
+      // 路径①：浏览器直连 stepfun（真实 stepaudio 语音）
       try {
-        const cfg = STEPFUN_VOICE_MAP[npcKey] || STEPFUN_VOICE_MAP._default;
-        const revealed = (typeof S !== "undefined" && S.revealed && S.revealed[npcKey]);
-        const instruction = (revealed && cfg.revealedInstruction) ? cfg.revealedInstruction : (cfg.instruction || undefined);
-        await playCloudTTS(endpoint, text, {
-          voice: cfg.voice,
-          instruction,
-          speed: cfg.speed,
-          volume: cfg.volume,
-        });
+        await playStepfunTTS(text, ttsOpts);
+        speaking = false;
+        return;
+      } catch (e) {
+        console.warn("[TTS] 阶跃直连失败，回退浏览器原生：", e && e.message ? e.message : e);
+      }
+    } else if (endpoint) {
+      // 路径②：后端代理 /api/tts
+      try {
+        await playCloudTTS(endpoint, text, ttsOpts);
         speaking = false;
         return;
       } catch (e) {
