@@ -578,6 +578,18 @@
     /* V9.2 章节幕间转场卡 —— 方案 B */
     #act-transition{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;
       background:rgba(0,0,0,.92);overflow:hidden;cursor:pointer;}
+
+    /* V9.2 语音模块：NPC 朗读按钮 + 自动朗读开关 + 麦克风按钮 */
+    .tts-btn{flex:0 0 auto;background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:14px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--tx2);font-size:14px;transition:all .15s;}
+    .tts-btn:active{transform:scale(.94);}
+    .tts-btn.speaking{background:rgba(46,196,255,.18);border-color:#2ec4ff;color:#2ec4ff;animation:ttsPulse 1s ease-in-out infinite;}
+    @keyframes ttsPulse{0%,100%{opacity:.7;}50%{opacity:1;}}
+    .autoread-toggle{flex:0 0 auto;display:flex;align-items:center;gap:4px;font-size:11px;color:var(--tx2);background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:12px;padding:4px 8px;cursor:pointer;}
+    .autoread-toggle.on{background:rgba(46,196,255,.15);border-color:#2ec4ff;color:#2ec4ff;}
+    .mic-btn{flex:0 0 auto;background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:50%;width:38px;height:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--tx2);font-size:16px;transition:all .15s;}
+    .mic-btn:active{transform:scale(.94);}
+    .mic-btn.listening{background:rgba(220,20,60,.25);border-color:#DC143C;color:#fff;animation:micPulse 1s ease-in-out infinite;}
+    @keyframes micPulse{0%,100%{box-shadow:0 0 0 0 rgba(220,20,60,.4);}50%{box-shadow:0 0 0 8px rgba(220,20,60,0);}}
     #act-transition.show{display:flex;animation:actFadeIn .6s ease both;}
     #act-transition.hide-out{animation:actFadeOut .6s ease both;}
     @keyframes actFadeIn{from{opacity:0;}to{opacity:1;}}
@@ -652,6 +664,8 @@
         <button class="accuse-badge" id="accuse-badge" title="标记此人为骗子">
           <span class="acc-tag" id="acc-tag">⛔ 标记</span>
         </button>
+        <button class="tts-btn" id="tts-btn" title="朗读当前对话">🔊</button>
+        <div class="autoread-toggle" id="autoread-toggle" title="开启后 NPC 新消息自动朗读"><span id="autoread-icon">🔈</span><span>自动</span></div>
       </div>
 
       <div class="chat-area" id="chat-area"></div>
@@ -922,6 +936,7 @@
   </div>
 
   <script src="audio.js"></script>
+  <script src="speech.js"></script>
   <script src="scenarios.js"></script>
   <script src="scamTypes.js"></script>
   <script src="report.js"></script>

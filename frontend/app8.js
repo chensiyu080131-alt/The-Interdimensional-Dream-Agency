@@ -1215,7 +1215,7 @@ function renderProactiveOptions(npcKey) {
   // 自由输入框
   const row = document.createElement("div");
   row.className = "free-row";
-  row.innerHTML = `<input class="free-input" id="free-input" placeholder="输入消息发给${npc.name}……" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="text"/><button class="free-send" id="free-send">发送</button>`;
+  row.innerHTML = `<input class="free-input" id="free-input" placeholder="输入消息发给${npc.name}……" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="text"/><button class="mic-btn" id="mic-btn" title="语音输入">🎤</button><button class="free-send" id="free-send">发送</button>`;
   bar.appendChild(row);
   const sendBtn = row.querySelector("#free-send");
   const inputEl = row.querySelector("#free-input");
@@ -1228,6 +1228,8 @@ function renderProactiveOptions(npcKey) {
     handleProactiveContact(npcKey, v);
   });
   inputEl.addEventListener("keydown", (e) => { if (e.key === "Enter") sendBtn.click(); });
+  // V9.2 语音输入按钮（识别完成自动发送）
+  bindMicInput(row.querySelector("#mic-btn"), inputEl, sendBtn);
 }
 
 /** 处理主动联系 NPC 的回复（预设/自由输入共用） */
@@ -1498,7 +1500,7 @@ function renderOptions(node) {
   if (!node.options.some(o => o.ending)) {
     const row = document.createElement("div");
     row.className = "free-row";
-    row.innerHTML = `<input class="free-input" id="free-input" placeholder="也可自己打字回复……" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="text"/><button class="free-send" id="free-send">发送</button>`;
+    row.innerHTML = `<input class="free-input" id="free-input" placeholder="也可自己打字回复……" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="text"/><button class="mic-btn" id="mic-btn" title="语音输入">🎤</button><button class="free-send" id="free-send">发送</button>`;
     bar.appendChild(row);
     $("free-send").addEventListener("click", () => {
       const v = $("free-input").value.trim();
@@ -1506,6 +1508,8 @@ function renderOptions(node) {
       handleFreeText(v, node);
     });
     $("free-input").addEventListener("keydown", (e) => { if (e.key === "Enter") $("free-send").click(); });
+    // V9.2 语音输入按钮（识别完成自动发送）
+    bindMicInput($("mic-btn"), $("free-input"), $("free-send"));
   }
 }
 
@@ -1889,6 +1893,10 @@ function renderProfile() {
 function pushMessageFinal(convKey, who, text, phase) {
   S.convs[convKey].messages.push({ who, text, psy: phase });
   if (convKey === S.activeConv) appendBubble(who, text, phase, true, true);
+  // V9.2 TTS：NPC 新消息 + 开启了自动朗读 + 当前正在看这个对话 → 自动朗读
+  if (who === 'ai' && convKey === S.activeConv && window.Speech && Speech.isAutoRead && Speech.isAutoRead()) {
+    Speech.speak(text, convKey);
+  }
 }
 function appendBubble(who, text, phase, scroll, animate) {
   const area = $("chat-area");
@@ -2419,6 +2427,65 @@ $("switcher-badge").addEventListener("click", () => { audioSFX("click"); showIde
 $("switcher-cancel").addEventListener("click", () => { audioSFX("click"); hide("switcher-overlay"); });
 /* V9.2 标记骗子按钮 */
 $("accuse-badge").addEventListener("click", () => { audioSFX("click"); toggleAccuse(); });
+
+/* V9.2 语音模块：朗读按钮 + 自动朗读开关 */
+$("tts-btn").addEventListener("click", () => {
+  if (!window.Speech || !Speech.ttsSupported()) { toast("当前浏览器不支持语音朗读"); return; }
+  const btn = $("tts-btn");
+  if (btn.classList.contains("speaking")) {
+    Speech.stop(); btn.classList.remove("speaking"); btn.textContent = "🔊"; return;
+  }
+  // 朗读当前对话最后一条 AI 消息
+  const conv = S.activeConv;
+  if (!conv || !S.convs[conv]) return;
+  const aiMsgs = S.convs[conv].messages.filter(m => m.who === "ai");
+  if (!aiMsgs.length) { toast("暂无可朗读的消息"); return; }
+  const last = aiMsgs[aiMsgs.length - 1].text;
+  btn.classList.add("speaking"); btn.textContent = "⏸";
+  Speech.speak(last, conv);
+  // 朗读结束后恢复按钮（轮询，因 SpeechSynthesis 无简单回调）
+  const checkEnd = setInterval(() => {
+    if (!window.speechSynthesis || (!window.speechSynthesis.speaking && !window.speechSynthesis.pending)) {
+      btn.classList.remove("speaking"); btn.textContent = "🔊"; clearInterval(checkEnd);
+    }
+  }, 200);
+});
+// 自动朗读开关
+function refreshAutoReadUI() {
+  const tog = $("autoread-toggle");
+  const icon = $("autoread-icon");
+  if (!tog || !icon) return;
+  if (Speech.isAutoRead && Speech.isAutoRead()) { tog.classList.add("on"); icon.textContent = "🔊"; }
+  else { tog.classList.remove("on"); icon.textContent = "🔈"; }
+}
+$("autoread-toggle").addEventListener("click", () => {
+  if (!window.Speech || !Speech.ttsSupported()) { toast("当前浏览器不支持语音朗读"); return; }
+  Speech.setAutoRead(!Speech.isAutoRead());
+  refreshAutoReadUI();
+  toast(Speech.isAutoRead() ? "🔊 已开启自动朗读，NPC 新消息会朗读出来" : "已关闭自动朗读");
+});
+refreshAutoReadUI();
+
+/* V9.2 语音输入：把 mic 按钮绑定到 SpeechRecognition，识别完成自动填入并发送 */
+function bindMicInput(micBtn, inputEl, sendBtn) {
+  if (!micBtn || !inputEl) return;
+  micBtn.addEventListener("click", () => {
+    if (!window.Speech || !Speech.asrSupported()) { toast("当前浏览器不支持语音输入"); return; }
+    if (Speech.isListening && Speech.isListening()) {
+      Speech.stopListen();
+      micBtn.classList.remove("listening");
+      return;
+    }
+    micBtn.classList.add("listening");
+    Speech.startListen(
+      (text, isFinal) => {
+        if (text) inputEl.value = text;
+        if (isFinal && text && text.trim() && sendBtn) sendBtn.click();
+      },
+      () => { micBtn.classList.remove("listening"); }
+    );
+  });
+}
 
 /** 切换"标记为骗子"状态，并给即时反馈 */
 function toggleAccuse() {
