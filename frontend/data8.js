@@ -215,6 +215,9 @@ const ACTORS = {
   xiaoya:   { name: "小雅", type: "victim", role: "疑似受害者", color: "#F0A020", avatar: "雅", portrait: "assets/portraits/xiaoya.png", tagline: "刚投了 3 万的姑娘" },
   chenlu:   { name: "陈露", type: "victim", role: "失联好友", color: "#F0A020", avatar: "露", portrait: "assets/portraits/chenlu.png", tagline: "你要找的人" },
   anon:     { name: "匿名X", type: "informant", role: "神秘线人", color: "#8E44AD", avatar: "X", portrait: "assets/portraits/anon.png", tagline: "只在深夜出现" },
+  /* —— 教师线专属 NPC —— */
+  xiaoyun:  { name: "小云", type: "target", role: "目标骗子", color: "#DC143C", avatar: "云", tagline: "自称「学生家长」" },
+  laowang:  { name: "老王", type: "handler", role: "退休同事", color: "#2C7BE5", avatar: "王", tagline: "揭穿骗局的老友" },
 };
 
 /* ===================== 反卧底检测规则 ===================== */
