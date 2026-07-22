@@ -18,6 +18,7 @@
 const express = require("express");
 const cors = require("cors");
 const config = require("./config");
+const stepTts = require("../tts");
 
 const app = express();
 
@@ -63,6 +64,7 @@ const analyticsRouter = require("./routes/analytics"); // M5 数据埋点接收�
 app.use("/api/chat", chatRouter);
 app.use("/api/ending", endingRouter);
 app.use("/api/track", analyticsRouter);
+app.post("/api/tts", stepTts);
 
 // 根路径健康检查
 app.get("/", (req, res) => {

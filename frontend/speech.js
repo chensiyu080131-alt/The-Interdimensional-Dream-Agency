@@ -1,13 +1,14 @@
-/* V9.2 语音模块 —— 基于浏览器原生 Web Speech API
- * 零依赖、零后端、零成本：
- *   - TTS：window.speechSynthesis 朗读 NPC 消息
- *   - ASR：window.SpeechRecognition 玩家语音输入
- * 沉浸模式：骗子揭露前用中性音色，揭露后用带"敌意"的音色（更低沉/更快）
+/* V9.2 语音模块 —— 云端 TTS(阶跃 Step-1o Audio) 优先 + 浏览器原生回退
+ * 零前端密钥：云端 TTS 经本地/自有后端代理 /api/tts（密钥在后端环境变量 STEP_API_KEY）。
+ *   - TTS：优先调用后端 /api/tts（Step-1o Audio 合成高质量中文语音），失败/不可用回退 window.speechSynthesis
+ *   - ASR：window.SpeechRecognition 玩家语音输入（浏览器原生，免费即时，不上传云端）
  */
 (function () {
   const Speech = {};
   let voicesCache = [];
   let autoRead = localStorage.getItem("fanzha_autoread") === "1";
+  let speaking = false;
+  let currentAudio = null;
 
   /* 各 NPC 的音色配置（pitch 0-2, rate 0.5-2, 骗子揭露后变调） */
   const VOICE_PROFILE = {
@@ -25,7 +26,6 @@
     _default:  { lang: "zh-CN", pitch: 1.0, rate: 1.0 },
   };
 
-  /* 加载系统可用音色（异步，首次调用 speechSynthesis 时才完整） */
   function loadVoices() {
     try {
       voicesCache = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
@@ -38,19 +38,61 @@
 
   function pickVoice(lang) {
     if (!voicesCache.length) loadVoices();
-    // 优先匹配中文音色
     const zh = voicesCache.find(v => /zh|cmn|Chinese/i.test(v.lang) || /zh|中文|普通话/i.test(v.name));
     return zh || voicesCache.find(v => v.lang && v.lang.startsWith(lang.slice(0, 2))) || null;
   }
 
-  /** 是否支持 TTS */
-  Speech.ttsSupported = function () { return !!(window.speechSynthesis && window.SpeechSynthesisUtterance); };
+  /* ---------- 云端 TTS：阶跃 Step-1o Audio（经后端 /api/tts 代理） ---------- */
+  function getCloudTTSEndpoint() {
+    const h = location.hostname;
+    if (h === "localhost" || h === "127.0.0.1") return "http://localhost:3000/api/tts";
+    return window.__CLOUD_TTS || null;
+  }
 
-  /** 朗读文本，按 NPC key 应用音色（揭露状态影响音调） */
-  Speech.speak = function (text, npcKey) {
-    if (!Speech.ttsSupported() || !text) return;
+  async function playCloudTTS(endpoint, text) {
+    const r = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+    if (!r.ok) {
+      let msg = "";
+      try { const j = await r.json(); msg = j.error || ""; } catch (e) {}
+      throw new Error(msg || ("HTTP " + r.status));
+    }
+    const blob = await r.blob();
+    if (!blob || !blob.size) throw new Error("empty audio");
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    currentAudio = audio;
+    return await new Promise((resolve, reject) => {
+      audio.onended = () => { try { URL.revokeObjectURL(url); } catch (e) {} currentAudio = null; resolve(true); };
+      audio.onerror = () => { try { URL.revokeObjectURL(url); } catch (e) {} currentAudio = null; reject(new Error("audio play error")); };
+      audio.play().catch(reject);
+    });
+  }
+
+  Speech.ttsSupported = function () {
+    return !!(getCloudTTSEndpoint() || (window.speechSynthesis && window.SpeechSynthesisUtterance));
+  };
+
+  /** 朗读文本：云端 TTS 优先，失败回退浏览器原生 */
+  Speech.speak = async function (text, npcKey) {
+    if (!text) return;
+    speaking = true;
+    const endpoint = getCloudTTSEndpoint();
+    if (endpoint) {
+      try {
+        await playCloudTTS(endpoint, text);
+        speaking = false;
+        return;
+      } catch (e) {
+        console.warn("[TTS] 云端语音失败，回退浏览器原生：", e && e.message ? e.message : e);
+      }
+    }
+    // 回退：浏览器原生 speechSynthesis
     try {
-      window.speechSynthesis.cancel(); // 打断上一句
+      window.speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
       const profile = VOICE_PROFILE[npcKey] || VOICE_PROFILE._default;
       const revealed = (typeof S !== "undefined" && S.revealed && S.revealed[npcKey]);
@@ -59,30 +101,33 @@
       u.rate = revealed ? (profile.revealedRate || profile.rate) : profile.rate;
       const v = pickVoice(u.lang);
       if (v) u.voice = v;
+      u.onend = () => { speaking = false; };
+      u.onerror = () => { speaking = false; };
       window.speechSynthesis.speak(u);
-    } catch (e) { /* 静默失败，不影响游戏 */ }
+    } catch (e) { speaking = false; }
   };
 
-  /** 停止朗读 */
   Speech.stop = function () {
+    speaking = false;
     try { if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch (e) {}
+    if (currentAudio) { try { currentAudio.pause(); currentAudio.currentTime = 0; } catch (e) {} currentAudio = null; }
   };
 
-  /** 自动朗读开关 */
-  Speech.isAutoRead = function () { return autoRead; };
+  Speech.isSpeaking = function () { return speaking; };
+
   Speech.setAutoRead = function (on) {
     autoRead = !!on;
     localStorage.setItem("fanzha_autoread", autoRead ? "1" : "0");
     if (!autoRead) Speech.stop();
   };
+  Speech.isAutoRead = function () { return autoRead; };
 
-  /* ============ ASR 语音识别 ============ */
+  /* ============ ASR 语音识别（浏览器原生） ============ */
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   Speech.asrSupported = function () { return !!SR; };
 
   let recog = null;
   let recogActive = false;
-  /** 开始监听，结果回调 onResult(text)，结束后回调 onEnd() */
   Speech.startListen = function (onResult, onEnd) {
     if (!SR) return false;
     try {

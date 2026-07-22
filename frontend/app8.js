@@ -2445,7 +2445,7 @@ $("tts-btn").addEventListener("click", () => {
   Speech.speak(last, conv);
   // 朗读结束后恢复按钮（轮询，因 SpeechSynthesis 无简单回调）
   const checkEnd = setInterval(() => {
-    if (!window.speechSynthesis || (!window.speechSynthesis.speaking && !window.speechSynthesis.pending)) {
+    if (!Speech.isSpeaking()) {
       btn.classList.remove("speaking"); btn.textContent = "🔊"; clearInterval(checkEnd);
     }
   }, 200);
