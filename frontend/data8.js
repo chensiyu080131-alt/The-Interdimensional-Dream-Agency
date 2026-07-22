@@ -204,10 +204,16 @@ const UNLOCK_RULES = {
   teacher:   { type: "count", n: 3, desc: "完成任意 3 条线" },
 };
 
-/* ===================== 角色（对话对象）通用档案 ===================== */
+/* ===================== 角色（对话对象）通用档案 =====================
+ * V9.2 沉浸模式：骗子(target/accomplice)开局用 disguise 伪装成普通人，
+ * 玩家通过聊天话术识别 + 标记揭露后才看到真实身份（红头像+骗子标签）。
+ * 字段：disguise = { role, color, avatar, tagline } 开局显示的伪装信息。
+ */
 const ACTORS = {
-  zhanghao: { name: "张浩", type: "target", role: "目标骗子", color: "#DC143C", avatar: "浩", portrait: "assets/portraits/zhanghao.png", tagline: "自称「金融项目负责人」" },
-  lijie:    { name: "李姐", type: "accomplice", role: "骗子同伙", color: "#C0392B", avatar: "李", portrait: "assets/portraits/lijie.png", tagline: "群里最活跃的「成功学员」" },
+  zhanghao: { name: "张浩", type: "target", role: "目标骗子", color: "#DC143C", avatar: "浩", portrait: "assets/portraits/zhanghao.png", tagline: "自称「金融项目负责人」",
+    disguise: { role: "金融从业者", color: "#5D6D7E", avatar: "浩", tagline: "做量化投资的，常出差" } },
+  lijie:    { name: "李姐", type: "accomplice", role: "骗子同伙", color: "#C0392B", avatar: "李", portrait: "assets/portraits/lijie.png", tagline: "群里最活跃的「成功学员」",
+    disguise: { role: "投资群群友", color: "#7F8C8D", avatar: "李", tagline: "群里的活跃分子" } },
   laok:     { name: "老K", type: "handler", role: "警方联络人", color: "#2C7BE5", avatar: "K", portrait: "assets/portraits/laok.png", tagline: "你的上家" },
   editor:   { name: "主编老陆", type: "handler", role: "报社主编", color: "#2C7BE5", avatar: "陆", portrait: "assets/portraits/editor.png", tagline: "你的选题负责人" },
   coord:    { name: "站长阿妮", type: "handler", role: "志愿站长", color: "#2C7BE5", avatar: "妮", portrait: "assets/portraits/coord.png", tagline: "反诈志愿站负责人" },
@@ -216,7 +222,8 @@ const ACTORS = {
   chenlu:   { name: "陈露", type: "victim", role: "失联好友", color: "#F0A020", avatar: "露", portrait: "assets/portraits/chenlu.png", tagline: "你要找的人" },
   anon:     { name: "匿名X", type: "informant", role: "神秘线人", color: "#8E44AD", avatar: "X", portrait: "assets/portraits/anon.png", tagline: "只在深夜出现" },
   /* —— 教师线专属 NPC —— */
-  xiaoyun:  { name: "小云", type: "target", role: "目标骗子", color: "#DC143C", avatar: "云", tagline: "自称「学生家长」" },
+  xiaoyun:  { name: "小云", type: "target", role: "目标骗子", color: "#DC143C", avatar: "云", tagline: "自称「学生家长」",
+    disguise: { role: "学生家长", color: "#95A5A6", avatar: "云", tagline: "孩子作文不好，想请教" } },
   laowang:  { name: "老王", type: "handler", role: "退休同事", color: "#2C7BE5", avatar: "王", tagline: "揭穿骗局的老友" },
 };
 

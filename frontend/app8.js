@@ -71,7 +71,44 @@ const S = {
   maskUsedPerNPC: {},      // {convKey: [aliasKey, ...]} 每个 NPC 面前用过的马甲列表
   totalMaskSwitches: 0,    // 整局换马甲总次数
   maskSwitchBlocked: false, // 是否已被封禁换马甲（暴露后）
+  revealed: {},            // V9.2 沉浸模式：{convKey: true} 玩家已识破的骗子，揭露后显示真实身份
 };
+
+/* V9.2 沉浸模式：获取 NPC 的「当前显示信息」。
+ * 骗子(target/accomplice)未揭露前返回 disguise 伪装身份（中性色+普通role），
+ * 揭露后(S.revealed[key])或非骗子 NPC 返回真实信息。
+ * 返回字段与 ACTORS 一致：name/role/color/avatar/tagline/type/portrait
+ */
+function getActorDisplay(key) {
+  const a = ACTORS[key];
+  if (!a) return null;
+  // 骗子且未被揭露 → 返回伪装身份
+  if ((a.type === "target" || a.type === "accomplice") && a.disguise && !S.revealed[key]) {
+    return {
+      name: a.name,
+      role: a.disguise.role,
+      color: a.disguise.color,
+      avatar: a.disguise.avatar || a.avatar,
+      tagline: a.disguise.tagline,
+      type: "civilian", // 显示层一律当普通人，不泄露 type
+      portrait: a.portrait, // 头像图可保留（玩家看不出区别）
+      _real: a, // 保留真实引用，供揭露逻辑用
+    };
+  }
+  return a;
+}
+
+/** 揭露骗子真实身份（玩家标记正确时触发） */
+function revealActor(key) {
+  if (!S.revealed) S.revealed = {};
+  if (S.revealed[key]) return false; // 已揭露
+  S.revealed[key] = true;
+  const real = ACTORS[key];
+  if (!real) return true;
+  audioSFX("cardFlip");
+  toast("🎭 真面目揭露：" + real.name + " 是「" + real.role + "」！");
+  return true;
+}
 
 const $ = (id) => document.getElementById(id);
 const show = (id) => $(id).classList.add("show");
@@ -571,6 +608,7 @@ function startGame() {
   }
   // V9.2 标记骗子机制：记录玩家指控 { convKey: true }，结局时统计识别准确率
   S.accused = {};
+  S.revealed = {}; // V9.2 沉浸模式：每局重置已揭露的骗子
   S.chatIdentity = (MASIAS[S.idKey] && MASIAS[S.idKey][0]) ? MASIAS[S.idKey][0].key : null;
   S.maskSwitchCount = {}; S.maskUsedPerNPC = {}; S.totalMaskSwitches = 0; S.maskSwitchBlocked = false;
 
@@ -1021,19 +1059,22 @@ function renderConvList() {
   const box = $("conv-list");
   box.innerHTML = "";
   S.story.actors.forEach(k => {
-    const a = ACTORS[k];
+    const real = ACTORS[k];          // 真实数据（用于揭露判断）
+    const a = getActorDisplay(k);    // V9.2 显示层数据（骗子未揭露时是伪装身份）
     const c = S.convs[k];
     // 防御：缺失 ACTORS 条目或 convs 条目时跳过，避免整个列表因单条坏数据崩成空白
-    if (!a || !c) {
+    if (!a || !c || !real) {
       console.warn("[renderConvList] 跳过缺失的 actor/conv:", k);
       return;
     }
     const last = c.messages.length ? c.messages[c.messages.length-1].text : a.tagline;
     const row = document.createElement("div");
     row.className = "conv-row" + (k === S.activeConv ? " active" : "");
-    // NPC 类型标签（V9.2: civilian 不显示类型徽章，让玩家自己判断）
-    const typeLabels = { target: "🎯 目标", accomplice: "👥 同伙", handler: "📡 联络", victim: "🆘 受害者", informant: "👤 线人" };
-    const typeBadge = typeLabels[a.type] || "";
+    // V9.2 沉浸模式：只有「已揭露的骗子」才显示骗子徽章，其他一律不显示类型
+    let typeBadge = "";
+    if (S.revealed && S.revealed[k] && (real.type === "target" || real.type === "accomplice")) {
+      typeBadge = real.type === "target" ? "🎯 骗子" : "👥 同伙";
+    }
     // V9.2 玩家标记状态：被标记的联系人显示红色 ⛔ 角标
     const accusedMark = (S.accused && S.accused[k]) ? '<span class="conv-accused">⛔</span>' : '';
     row.innerHTML = `
@@ -1053,7 +1094,7 @@ function openConversation(key, silent) {
   const prevConv = S.activeConv;
   S.activeConv = key;
   S.convs[key].unread = false;
-  const a = ACTORS[key];
+  const a = getActorDisplay(key); // V9.2 沉浸模式：骗子未揭露时显示伪装身份
   $("chat-title").textContent = a.name;
   $("chat-sub").textContent = a.role + " · " + a.tagline;
   $("chat-av").innerHTML = a.portrait ? '<img class="av-img" src="' + a.portrait + '">' : a.avatar;
@@ -2394,17 +2435,29 @@ function toggleAccuse() {
     if (actor.type === "target" || actor.type === "accomplice") {
       const bonus = 8;
       S.awareness = Math.min(100, (S.awareness || 0) + bonus);
-      toast("✅ 准确识别！" + actor.name + "确实是骗子。清醒度 +" + bonus);
+      // V9.2 沉浸模式：标对骗子 → 揭露真实身份 + 刷新顶栏显示
+      const firstReveal = revealActor(key);
+      toast("✅ 准确识破！" + actor.name + " 确实是「" + actor.role + "」。清醒度 +" + bonus + (firstReveal ? " · 真面目已揭露" : ""));
       audioSFX("success");
+      // 实时刷新顶栏（头像变红、role 变「目标骗子」）
+      const a = getActorDisplay(key);
+      $("chat-sub").textContent = a.role + " · " + a.tagline;
+      $("chat-av").innerHTML = a.portrait ? '<img class="av-img" src="' + a.portrait + '">' : a.avatar;
+      $("chat-av").style.background = a.portrait ? "transparent" : a.color;
+      // 头像闪一下强调揭露
+      const avEl = $("chat-av");
+      if (avEl && avEl.animate) {
+        try { avEl.animate([{filter:"brightness(2.5) saturate(2)"},{filter:"none"}], {duration:700}); } catch(e){}
+      }
     } else if (actor.type === "civilian") {
       const penalty = 5;
       S.awareness = Math.max(0, (S.awareness || 0) - penalty);
-      toast("❌ 误判！" + actor.name + "只是个普通人，不是骗子。清醒度 -" + penalty);
+      toast("❌ 误判！" + actor.name + " 只是个普通人，不是骗子。清醒度 -" + penalty);
     } else {
       // handler/victim/informant
       const penalty = 3;
       S.awareness = Math.max(0, (S.awareness || 0) - penalty);
-      toast("⚠ " + actor.name + "不是骗子（" + actor.role + "）。清醒度 -" + penalty);
+      toast("⚠ " + actor.name + " 不是骗子（" + actor.role + "）。清醒度 -" + penalty);
     }
     updateTopbar();
   } else {
