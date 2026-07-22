@@ -84,7 +84,7 @@ function getAISystemPrompt(npcKey) {
   let base = AI_PERSONA_PROMPTS[npcKey] || "";
   // V9.2: 注入详细的心理弱点利用策略
   if (S.weakness) {
-    const w = WEAKNESS_TYPES.find(x => x.key === S.weakness);
+    const w = WEAKNESSES.find(x => x.key === S.weakness);
     if (w) {
       var exploitDetail = "";
       switch (w.key) {
@@ -275,7 +275,7 @@ $("idcard-reroll").addEventListener("click", () => { audioSFX("click"); hide("id
 $("idcard-start").addEventListener("click", () => { audioSFX("identityReveal"); hide("identity-overlay"); showWeaknessSelect(); });
 
 /* ---------------- 心理弱点系统（V9.2 — 极乐迪斯科「思绪」风格） ---------------- */
-const WEAKNESS_TYPES = [
+const WEAKNESSES = [
   {
     key: "lonely", label: "孤独感", icon: "🌧️", hook: "容易被陪伴型话术打动",
     scamTactic: "感情共鸣、每日问候、建立虚假亲密关系",
@@ -435,7 +435,7 @@ const WEAKNESS_TYPES = [
 ];
 
 function getWeaknessConfig() {
-  return WEAKNESS_TYPES.find(x => x.key === S.weakness) || null;
+  return WEAKNESSES.find(x => x.key === S.weakness) || null;
 }
 
 /* 内心戏触发引擎：检测 NPC 文本是否攻击了玩家弱点 */
@@ -466,7 +466,7 @@ function detectVoiceContext(text) {
 }
 
 function showWeaknessSelect() {
-  $("weakness-list").innerHTML = WEAKNESS_TYPES.map(w => `
+  $("weakness-list").innerHTML = WEAKNESSES.map(w => `
     <div class="wk-card" onclick="selectWeakness('${w.key}')" style="--wkc:var(--hl)">
       <div class="wk-icon">${w.icon}</div>
       <div class="wk-info">
@@ -481,7 +481,7 @@ function showWeaknessSelect() {
 function selectWeakness(key) {
   audioSFX("click");
   S.weakness = key;
-  const w = WEAKNESS_TYPES.find(x => x.key === key);
+  const w = WEAKNESSES.find(x => x.key === key);
   toast(`🧠 弱点选定：${w.label} — 小心骗子利用这一点`);
   hide("weakness-overlay");
   startGame();
@@ -2093,7 +2093,7 @@ function runShield() {
             + Math.max(0, 15 - Math.floor(S.suspicion/8));
   score = clamp(score, 5, 100);
   // V9.0: 心理弱点标签
-  const weakObj = S.weakness ? (WEAKNESS_TYPES.find(w=>w.key===S.weakness) || {}) : {};
+  const weakObj = S.weakness ? (WEAKNESSES.find(w=>w.key===S.weakness) || {}) : {};
   const weakLabel = weakObj.label || "";
   const weak = weakLabel;
   // 弱点分析
@@ -2157,7 +2157,7 @@ function shareShieldReport() {
     Object.values(evTypeCounts).forEach(function(v) { if (v > 0) evGotTypes++; });
   }
   var evTotalTypes = 6;
-  var weakObj = S.weakness ? (WEAKNESS_TYPES.find(function(w){return w.key===S.weakness}) || {}) : {};
+  var weakObj = S.weakness ? (WEAKNESSES.find(function(w){return w.key===S.weakness}) || {}) : {};
 
   var tips = [
     "1. 任何要求转账的「朋友」，先电话核实。",
