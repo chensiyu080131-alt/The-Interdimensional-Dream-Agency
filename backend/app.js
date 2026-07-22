@@ -35,6 +35,21 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 /* ------------------------------------------------------------
+ * 静态托管前端（同域部署：一个进程同时服务游戏页面与 API）
+ * 部署到大陆节点后，浏览器从同源加载前端、调用 /api/tts，
+ * 后端（大陆 IP）直连 stepfun 合成 stepaudio，无 451 / 无跨域。
+ * 须在 API / 健康检查路由之前注册，确保 / 与静态资源优先命中。
+ * ---------------------------------------------------------- */
+const path = require("path");
+const FRONTEND_DIR = path.join(__dirname, "..", "frontend");
+app.use(express.static(FRONTEND_DIR));
+app.get(/^(?!\/api).*/, (req, res) => {
+  res.sendFile(path.join(FRONTEND_DIR, "index.html"), (err) => {
+    if (err) res.status(404).send("前端资源未找到，请确认 frontend 目录与 backend 同级部署。");
+  });
+});
+
+/* ------------------------------------------------------------
  * 混元大模型客户端（OpenAI 兼容接口）
  * ---------------------------------------------------------- */
 const HUNYUAN_API_KEY = process.env.HUNYUAN_API_KEY || "";
@@ -956,7 +971,7 @@ app.get("/api/session", (req, res) => {
 /* ============================================================
  * 健康检查
  * ============================================================ */
-app.get("/", (req, res) => {
+app.get("/api/health", (req, res) => {
   res.json({
     service: "异次元梦想局 后端 API",
     version: "2.0.0",

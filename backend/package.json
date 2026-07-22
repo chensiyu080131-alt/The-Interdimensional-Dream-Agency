@@ -2,10 +2,10 @@
   "name": "fanzha-rensheng-backend",
   "version": "3.0.0",
   "description": "异次元梦想局 后端API服务（混元大模型 OpenAI 兼容接口）",
-  "main": "src/app.js",
+  "main": "app.js",
   "scripts": {
-    "start": "node src/app.js",
-    "dev": "node --watch src/app.js"
+    "start": "node app.js",
+    "dev": "node --watch app.js"
   },
   "dependencies": {
     "axios": "^1.7.2",

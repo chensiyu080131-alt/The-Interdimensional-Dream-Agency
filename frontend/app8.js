@@ -15,6 +15,8 @@ const AI_CONFIG = {
   enabled: true,        // 是否启用 AI 实时对话（后端未配置密钥时自动降级）
   timeout: 12000,       // 请求超时(ms)
 };
+// 暴露给 speech.js：生产环境 TTS 与 AI 共用同一大陆节点后端
+window.__API_BASE = AI_CONFIG.apiBase;
 
 /* 各 NPC 的 AI 人设 System Prompt（用于 /api/chat 的 system 参数） */
 const AI_PERSONA_PROMPTS = {

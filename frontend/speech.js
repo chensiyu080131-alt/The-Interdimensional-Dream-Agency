@@ -113,7 +113,9 @@
   function getCloudTTSEndpoint() {
     const h = location.hostname;
     if (h === "localhost" || h === "127.0.0.1") return "http://localhost:3000/api/tts";
-    return window.__CLOUD_TTS || null;
+    // 生产环境：与 AI 后端同源（腾讯云 API 网关，大陆节点可调用 stepaudio）
+    const base = (typeof window !== "undefined" && window.__API_BASE) || "https://ai-d9gd4xji5de241243.apigw.tcloudbase.com";
+    return base.replace(/\/$/, "") + "/api/tts";
   }
 
   async function playCloudTTS(endpoint, text, opts) {
