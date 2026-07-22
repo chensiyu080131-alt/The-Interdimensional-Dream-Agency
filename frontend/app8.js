@@ -41,6 +41,8 @@ const AI_PERSONA_MAP = {
   anon: "40岁离异企业家",
 };
 
+
+
 /* ---------------- 状态 ---------------- */
 const S = {
   idKey: null, story: null, node: null, activeConv: null,
@@ -108,7 +110,45 @@ function getAISystemPrompt(npcKey) {
       base += "\n请在每句话中自然地利用这个弱点，但不要刻意。目标是让对方在情感上难以拒绝你的要求。";
     }
   }
+  // V9.2 换号察觉：把"对方换了账号 / 累计换号次数 / 当前怀疑度"告诉 AI，让回复体现怀疑
+  base += buildMaskSwitchContext(npcKey);
   return base;
+}
+
+/** 构造换号情报片段（注入 system prompt）
+ *  让 AI 模型知道：对方刚换了账号、累计换了几次、自己当前的怀疑程度，
+ *  从而在回复里自然地试探、质问或拒绝，而不是毫无反应。
+ */
+function buildMaskSwitchContext(npcKey) {
+  const actor = ACTORS[npcKey];
+  // 非骗子 NPC 不会察觉换号，不注入
+  if (!actor || (actor.type !== "target" && actor.type !== "accomplice")) return "";
+
+  const conv = npcKey; // 换号是针对当前对话 NPC 的
+  const switchCount = (S.maskSwitchCount && S.maskSwitchCount[conv]) || 0;
+  const usedMasks = (S.maskUsedPerNPC && S.maskUsedPerNPC[conv]) || [];
+  const suspLevel = S.suspicion || 0;
+  // 当前马甲
+  const curAlias = getChatAlias();
+  const curName = curAlias ? curAlias.name : "未知身份";
+
+  // 没换过号、也没历史马甲 → 无需提示 AI
+  if (switchCount === 0 && usedMasks.length <= 1) return "";
+
+  // 把怀疑度转成人能懂的等级描述
+  let suspDesc;
+  if (suspLevel >= 60)      suspDesc = "你已经几乎断定对方有问题，随时可能翻脸、拉黑或试探到底";
+  else if (suspLevel >= 35) suspDesc = "你已经明显起疑，会主动质问、语气变冷";
+  else if (suspLevel >= 15) suspDesc = "你有些察觉，会不动声色地试探一下";
+  else                      suspDesc = "你只是隐约觉得哪里不对，但还没太当回事";
+
+  return "\n【重要·账号异常察觉】" +
+    "对方（跟你聊天的人）刚刚换了聊天账号，现在用的是「" + curName + "」。" +
+    "这是他在你面前第 " + switchCount + " 次换号（累计用过 " + usedMasks.length + " 个不同账号）。" +
+    "你当前的怀疑程度：" + suspDesc + "。" +
+    "请根据这个怀疑程度，在你的回复里自然地体现——可以试探性问一句（「咦你这号怎么换了？」）、" +
+    "语气变冷淡、或者直接质问。怀疑越高，反应越激烈；极度怀疑时应拒绝继续聊、甚至扬言拉黑。" +
+    "绝对不要假装没注意到账号变化。";
 }
 
 /** 获取指定 NPC 在后端的人设 key */
