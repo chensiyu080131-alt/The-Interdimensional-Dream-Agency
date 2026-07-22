@@ -11,37 +11,70 @@
   let speaking = false;
   let currentAudio = null;
 
-  /* 各 NPC → 阶跃 Step Plan 音色。
-   * 当前 step_plan 档位的「预设公版音色列表为空」，已验证只有 vibrant-youth 是被阶跃识别的合法音色；
-   * 其余占位名会从阶跃返回 400 voice_id_invalid。故先统一用 vibrant-youth 保证可用。
-   * 若你想给不同 NPC 分配独立音色：在本地（中国 IP）运行后端后，调用
-   *   GET <后端>/api/tts-voices  （或 stepfun /audio/voices）拿到你账号下可用音色，
-   *   再把对应 voice id 填到这里即可。 */
-  /* 各 NPC → 阶跃 stepaudio-2.5-tts 命名音色（step_plan 通道，均经后端实测可合成）
-   * 每个主线角色独立声音，沉浸感更强；群众 NPC 复用池中音色、彼此不重复。 */
+  /* 各 NPC → 阶跃 stepaudio-2.5-tts「音色 + 人设 instruction」。
+   * 关键：stepaudio-2.5-tts 是 Contextual TTS，必须靠 instruction（自然语言人设/情绪基调，≤200字）
+   *       才能触发「呼吸感、轻重主次、情绪弧线」的真人级表达；只给 voice 会被退回平直机器腔（之前「古板」的根因）。
+   *       voice 均为官方音色（step_plan 通道实测可合成）；speed 0.5~2；volume 0.1~2。
+   *       revealedInstruction：骗子身份揭露后切换的语气（撕破伪装）。 */
   const STEPFUN_VOICE_MAP = {
-    // —— 主线角色（11 个，音色各不相同）——
-    zhanghao:  "zixinnansheng",        // 张浩·骗子：自信男声
-    lijie:     "jingdiannvsheng",       // 李姐·同伙：经典女声
-    xiaoyun:   "elegantgentle-female",  // 小云·骗子：气质温婉（伪善）
-    laowang:   "soft-spoken-gentleman", // 老王·老友：温润绅士
-    laok:      "magnetic-voiced-male",  // 老K·警方联络：磁性男声
-    editor:    "wenrounansheng",        // 主编老陆：温柔男声
-    coord:     "livelybreezy-female",   // 站长阿妮：活力轻快女
-    police110: "yuanqinansheng",        // 值班民警：元气男声
-    xiaoya:    "lively-girl",           // 小雅·受害者：活泼女孩
-    chenlu:    "wenroushunv",           // 陈露·失联好友：温柔熟女
-    anon:      "vibrant-youth",         // 匿名X·线人：活力青年（神秘）
-    // —— 群众 NPC（8 个，彼此不同，复用池中音色）——
-    colleague_xiaowang: "yuanqinansheng",
-    classmate_ahao:     "zixinnansheng",
-    delivery_zhang:     "magnetic-voiced-male",
-    express_li:         "livelybreezy-female",
-    landlord_zhao:      "wenroushunv",
-    coach_lin:          "vibrant-youth",
-    blind_date:         "elegantgentle-female",
-    community_police:   "wenrounansheng",
-    _default:  "vibrant-youth",
+    // —— 主线角色（11 个，音色 + 人设各不相同）——
+    zhanghao: {
+      voice: "zixinnansheng", speed: 1.05,         // 张浩·骗子：自信男声
+      instruction: "你是个想拉人入局的骗子，热络油滑、过分自信，像过分热情的生意人，语气里带着刻意讨好的亲近感，语速中等偏快",
+      revealedInstruction: "你已撕破伪装，语气转为阴冷威胁、不再掩饰恶意，语速放慢、字字压迫",
+    },
+    lijie: {
+      voice: "jingdiannvsheng", speed: 1.0,         // 李姐·同伙：经典女声
+      instruction: "你是老练的同伙，语气精明干练又带点娇嗔，滴水不漏、暗藏诱导，语速中等",
+      revealedInstruction: "你露出真面目，语气变得刻薄强硬、不再伪装客气，语速加快",
+    },
+    xiaoyun: {
+      voice: "elegantgentle-female", speed: 0.95,   // 小云·骗子：气质温婉（伪善）
+      instruction: "你表面是温柔体贴的邻家女孩，实际在套话，语气温柔关切、故作真诚，语速偏慢，藏着不易察觉的试探",
+      revealedInstruction: "你卸下伪装，语气透出算计与冷意，温柔里掺进威胁，语速转快",
+    },
+    laowang: {
+      voice: "soft-spoken-gentleman", speed: 1.0,   // 老王·老友：温润绅士
+      instruction: "你是真心为朋友着想的老熟人，语气真诚热心、推心置腹，像多年老友在叮嘱，语速自然",
+    },
+    laok: {
+      voice: "magnetic-voiced-male", speed: 0.95,   // 老K·警方联络：磁性男声
+      instruction: "你是冷静专业的刑警，语气沉稳威严、干脆利落，带着不容置疑的权威感，语速偏慢",
+    },
+    editor: {
+      voice: "wenrounansheng", speed: 1.0,          // 主编老陆：温柔男声
+      instruction: "你是儒雅的文化人，语气温和克制、不疾不徐，像在循循善诱，语速中等",
+    },
+    coord: {
+      voice: "livelybreezy-female", speed: 1.1,     // 站长阿妮：活力轻快
+      instruction: "你是活泼热情的社区站长，语气轻快有活力、热络亲切，语速偏快",
+    },
+    police110: {
+      voice: "yuanqinansheng", speed: 1.05,         // 值班民警：元气男声
+      instruction: "你是年轻干练的值班民警，语气干脆利落、积极负责，带着职业警觉，语速中等偏快",
+    },
+    xiaoya: {
+      voice: "lively-girl", speed: 1.1, volume: 1.1,// 小雅·受害者：活泼女孩
+      instruction: "你是刚被骗、惊慌无助的年轻女孩，语气慌张脆弱、带点哭腔和颤抖，语速偏快",
+    },
+    chenlu: {
+      voice: "wenroushunv", speed: 0.95,            // 陈露·失联好友：温柔熟女
+      instruction: "你是焦虑担忧的失联好友，语气温柔但透着不安与急切，像在压抑情绪，语速偏慢",
+    },
+    anon: {
+      voice: "vibrant-youth", speed: 0.9,           // 匿名X·线人：活力青年（神秘）
+      instruction: "你是神秘线人，语气低沉、刻意压低声音保持距离感，带着若有若无的警觉，语速偏慢",
+    },
+    // —— 群众 NPC（8 个，音色彼此不同，进一步模糊视线）——
+    colleague_xiaowang: { voice: "qingniandaxuesheng", instruction: "你是个普通网友，语气随和随意，像日常闲聊" }, // 小王
+    classmate_ahao:     { voice: "zhengpaiqingnian",  instruction: "你是热心正直的年轻人，语气直率坦诚、充满正义感" }, // 阿豪
+    delivery_zhang:     { voice: "shuangkuainansheng", instruction: "你是爽朗的大叔，语气干脆豪爽、像街坊聊天" }, // 张师傅
+    express_li:         { voice: "ganliannvsheng",    instruction: "你是干练的快递员，语气职业利落、风风火火，公事公办" }, // 李姐快递
+    landlord_zhao:      { voice: "qinhenvsheng",      instruction: "你是热心肠的阿姨，语气亲切唠叨、像邻家大妈拉家常" }, // 赵阿姨
+    coach_lin:          { voice: "boyinnansheng",     instruction: "你是专业的健身教练，语气洪亮精神、充满干劲，带着职业热情" }, // 林教练
+    blind_date:         { voice: "zhixingjiejie",     instruction: "你是得体的相亲对象，语气知性从容、客气有分寸，像在礼貌试探" }, // 相亲对象
+    community_police:   { voice: "ruyananshi",        instruction: "你是经验丰富、和气的片警，语气沉稳平和，像拉家常般劝导" }, // 片警老周
+    _default: { voice: "vibrant-youth", instruction: "语气温和自然、清晰流畅、像真人聊天" },
   };
 
   /* 各 NPC 的音色配置（pitch 0-2, rate 0.5-2, 骗子揭露后变调） */
@@ -83,11 +116,18 @@
     return window.__CLOUD_TTS || null;
   }
 
-  async function playCloudTTS(endpoint, text, voice) {
+  async function playCloudTTS(endpoint, text, opts) {
+    opts = opts || {};
     const r = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text, voice: voice || undefined }),
+      body: JSON.stringify({
+        text,
+        voice: opts.voice || undefined,
+        ...(opts.instruction ? { instruction: opts.instruction } : {}),
+        ...(opts.speed ? { speed: opts.speed } : {}),
+        ...(opts.volume ? { volume: opts.volume } : {}),
+      }),
     });
     if (!r.ok) {
       let msg = "";
@@ -117,8 +157,15 @@
     const endpoint = getCloudTTSEndpoint();
     if (endpoint) {
       try {
-        const voice = STEPFUN_VOICE_MAP[npcKey] || STEPFUN_VOICE_MAP._default;
-        await playCloudTTS(endpoint, text, voice);
+        const cfg = STEPFUN_VOICE_MAP[npcKey] || STEPFUN_VOICE_MAP._default;
+        const revealed = (typeof S !== "undefined" && S.revealed && S.revealed[npcKey]);
+        const instruction = (revealed && cfg.revealedInstruction) ? cfg.revealedInstruction : (cfg.instruction || undefined);
+        await playCloudTTS(endpoint, text, {
+          voice: cfg.voice,
+          instruction,
+          speed: cfg.speed,
+          volume: cfg.volume,
+        });
         speaking = false;
         return;
       } catch (e) {

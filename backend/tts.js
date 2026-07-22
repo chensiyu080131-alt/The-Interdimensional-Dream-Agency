@@ -34,6 +34,9 @@ module.exports = async function stepTtsHandler(req, res) {
 
   const model = body.model || process.env.STEP_TTS_MODEL || "stepaudio-2.5-tts";
   const voice = body.voice || process.env.STEP_TTS_VOICE || "vibrant-youth";
+  const instruction = (body.instruction && body.instruction.toString().trim()) || undefined;
+  const speed = Number(body.speed);
+  const volume = Number(body.volume);
 
   try {
     const r = await fetch(`${STEP_BASE}/audio/speech`, {
@@ -43,6 +46,12 @@ module.exports = async function stepTtsHandler(req, res) {
         model,
         input: text,
         voice,
+        // —— stepaudio-2.5-tts 表现力参数（缺失则退回平直机器腔 = 之前「古板」的根因）——
+        ...(instruction ? { instruction } : {}),
+        ...(!isNaN(speed) && speed > 0 ? { speed } : {}),
+        ...(!isNaN(volume) && volume > 0 ? { volume } : {}),
+        text_normalization: "enhanced", // 更自然的数字/单位/符号读法
+        sample_rate: 24000,
         response_format: "wav",
       }),
     });
