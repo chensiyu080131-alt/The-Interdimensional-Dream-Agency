@@ -1,6 +1,7 @@
-/* V9.2 语音模块 —— 云端 TTS(阶跃 Step-1o Audio) 优先 + 浏览器原生回退
+/* V9.2 语音模块 —— 云端 TTS(阶跃 Step Audio 2 专用端点) 优先 + 浏览器原生回退
  * 零前端密钥：云端 TTS 经本地/自有后端代理 /api/tts（密钥在后端环境变量 STEP_API_KEY）。
- *   - TTS：优先调用后端 /api/tts（Step-1o Audio 合成高质量中文语音），失败/不可用回退 window.speechSynthesis
+ *   - TTS：优先调用后端 /api/tts（step-tts-2 / stepaudio-2.5-tts 合成高质量中文语音，按 NPC 分配音色），
+ *          失败/不可用回退 window.speechSynthesis
  *   - ASR：window.SpeechRecognition 玩家语音输入（浏览器原生，免费即时，不上传云端）
  */
 (function () {
@@ -9,6 +10,23 @@
   let autoRead = localStorage.getItem("fanzha_autoread") === "1";
   let speaking = false;
   let currentAudio = null;
+
+  /* 各 NPC → 阶跃 Step Audio 2 命名音色（来自官方音色库，覆盖 step-tts-2 / stepaudio-2.5-tts）
+   * 每个角色独立声音，沉浸感更强；缺省用 vibrant-youth。 */
+  const STEPFUN_VOICE_MAP = {
+    zhanghao:  "zixinnansheng",        // 自信男声（骗子·油滑）
+    lijie:     "soft-spoken-gentleman",// 温润绅士（骗子·话术）
+    xiaoyun:   "elegantgentle-female", // 气质温婉（老师）
+    laowang:   "wenrounansheng",       // 温柔男声（老王群众）
+    laok:      "yuanqinansheng",       // 元气男声
+    editor:    "jingdiannvsheng",      // 经典女声
+    coord:     "livelybreezy-female",  // 活力轻快
+    police110: "magnetic-voiced-male", // 磁性男声（警方）
+    xiaoya:    "lively-girl",          // 活泼女孩
+    chenlu:    "wenroushunv",          // 温柔熟女
+    anon:      "vibrant-youth",        // 活力青年
+    _default:  "vibrant-youth",
+  };
 
   /* 各 NPC 的音色配置（pitch 0-2, rate 0.5-2, 骗子揭露后变调） */
   const VOICE_PROFILE = {
@@ -49,11 +67,11 @@
     return window.__CLOUD_TTS || null;
   }
 
-  async function playCloudTTS(endpoint, text) {
+  async function playCloudTTS(endpoint, text, voice) {
     const r = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text }),
+      body: JSON.stringify({ text, voice: voice || undefined }),
     });
     if (!r.ok) {
       let msg = "";
@@ -83,7 +101,8 @@
     const endpoint = getCloudTTSEndpoint();
     if (endpoint) {
       try {
-        await playCloudTTS(endpoint, text);
+        const voice = STEPFUN_VOICE_MAP[npcKey] || STEPFUN_VOICE_MAP._default;
+        await playCloudTTS(endpoint, text, voice);
         speaking = false;
         return;
       } catch (e) {
