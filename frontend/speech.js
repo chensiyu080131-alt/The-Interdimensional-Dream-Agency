@@ -17,18 +17,30 @@
    * 若你想给不同 NPC 分配独立音色：在本地（中国 IP）运行后端后，调用
    *   GET <后端>/api/tts-voices  （或 stepfun /audio/voices）拿到你账号下可用音色，
    *   再把对应 voice id 填到这里即可。 */
+  /* 各 NPC → 阶跃 stepaudio-2.5-tts 命名音色（step_plan 通道，均经后端实测可合成）
+   * 每个主线角色独立声音，沉浸感更强；群众 NPC 复用池中音色、彼此不重复。 */
   const STEPFUN_VOICE_MAP = {
-    zhanghao:  "vibrant-youth",
-    lijie:     "vibrant-youth",
-    xiaoyun:   "vibrant-youth",
-    laowang:   "vibrant-youth",
-    laok:      "vibrant-youth",
-    editor:    "vibrant-youth",
-    coord:     "vibrant-youth",
-    police110: "vibrant-youth",
-    xiaoya:    "vibrant-youth",
-    chenlu:    "vibrant-youth",
-    anon:      "vibrant-youth",
+    // —— 主线角色（11 个，音色各不相同）——
+    zhanghao:  "zixinnansheng",        // 张浩·骗子：自信男声
+    lijie:     "jingdiannvsheng",       // 李姐·同伙：经典女声
+    xiaoyun:   "elegantgentle-female",  // 小云·骗子：气质温婉（伪善）
+    laowang:   "soft-spoken-gentleman", // 老王·老友：温润绅士
+    laok:      "magnetic-voiced-male",  // 老K·警方联络：磁性男声
+    editor:    "wenrounansheng",        // 主编老陆：温柔男声
+    coord:     "livelybreezy-female",   // 站长阿妮：活力轻快女
+    police110: "yuanqinansheng",        // 值班民警：元气男声
+    xiaoya:    "lively-girl",           // 小雅·受害者：活泼女孩
+    chenlu:    "wenroushunv",           // 陈露·失联好友：温柔熟女
+    anon:      "vibrant-youth",         // 匿名X·线人：活力青年（神秘）
+    // —— 群众 NPC（8 个，彼此不同，复用池中音色）——
+    colleague_xiaowang: "yuanqinansheng",
+    classmate_ahao:     "zixinnansheng",
+    delivery_zhang:     "magnetic-voiced-male",
+    express_li:         "livelybreezy-female",
+    landlord_zhao:      "wenroushunv",
+    coach_lin:          "vibrant-youth",
+    blind_date:         "elegantgentle-female",
+    community_police:   "wenrounansheng",
     _default:  "vibrant-youth",
   };
 
