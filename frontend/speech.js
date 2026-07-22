@@ -12,20 +12,32 @@
   let currentAudio = null;
   let _fallbackWarned = false;
 
+  /* 常驻语音状态指示（页面始终可见，便于诊断失败原因） */
+  function setTTSStatus(text, kind) {
+    try {
+      if (typeof document === "undefined") return;
+      const el = document.getElementById("tts-status");
+      if (!el) return;
+      el.textContent = text;
+      el.className = "tts-status tts-status-" + (kind || "info");
+      el.style.display = "inline-block";
+    } catch (e) {}
+  }
+
   /* 真实语音失败时给玩家一个「可见原因」，而不是静默回退（之前听感无变化、无提示） */
   function notifyTTSFallback(detail) {
-    if (_fallbackWarned) return;
-    _fallbackWarned = true;
     const d = String(detail || "");
     let reason;
     if (/451/.test(d)) reason = "仅限中国大陆网络(HTTP 451)";
-    else if (/audio play error/i.test(d)) reason = "浏览器拦截了播放(自动播放策略)";
-    else if (/Failed to fetch|NetworkError|network/i.test(d)) reason = "无法连接语音服务(网络/跨域)";
+    else if (/audio play|decode|not supported|src=|play\(\)/i.test(d)) reason = "浏览器拦截/无法播放音频(自动播放策略或格式不支持)";
+    else if (/Failed to fetch|NetworkError|network|跨域/i.test(d)) reason = "无法连接语音服务(网络/跨域)";
     else if (/401|403|unauthorized|Forbidden/i.test(d)) reason = "密钥无效/未授权";
-    else if (/4\d\d|5\d\d/.test(d)) reason = "服务返回 " + d.trim().slice(0, 80);
-    else reason = "网络或服务异常" + (d ? "（" + d.trim().slice(0, 60) + "）" : "");
+    else if (/4\d\d|5\d\d/.test(d)) reason = "服务返回 " + d.trim().slice(0, 100);
+    else reason = "网络或服务异常" + (d ? "（" + d.trim().slice(0, 80) + "）" : "");
+    setTTSStatus("⚠️ 云端语音未启用：" + reason + " → 已用浏览器原生", "warn");
     try {
-      if (typeof window !== "undefined" && typeof window.toast === "function") {
+      if (!_fallbackWarned && typeof window !== "undefined" && typeof window.toast === "function") {
+        _fallbackWarned = true;
         window.toast("真实语音未启用：" + reason + "，已用浏览器原生语音");
       }
     } catch (e) {}
@@ -263,6 +275,7 @@
       try {
         await playStepfunTTS(text, ttsOpts);
         speaking = false;
+        setTTSStatus("✅ 真实语音已启用（直连 stepfun）", "ok");
         return;
       } catch (e) {
         const d = e && e.message ? e.message : String(e);
@@ -274,6 +287,7 @@
       try {
         await playCloudTTS(endpoint, text, ttsOpts);
         speaking = false;
+        setTTSStatus("✅ 真实语音已启用（后端代理）", "ok");
         return;
       } catch (e) {
         const d = e && e.message ? e.message : String(e);
@@ -282,6 +296,7 @@
       }
     }
     // 回退：浏览器原生 speechSynthesis
+    setTTSStatus("🔊 浏览器原生语音（无云端）", "native");
     try {
       window.speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
