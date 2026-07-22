@@ -16,10 +16,14 @@
   function notifyTTSFallback(detail) {
     if (_fallbackWarned) return;
     _fallbackWarned = true;
-    let reason = "网络或服务异常";
-    if (detail && /451/.test(detail)) reason = "仅限中国大陆网络(HTTP 451)";
-    else if (detail && /401|403|unauthorized|Forbidden/i.test(detail)) reason = "密钥无效/未授权";
-    else if (detail && /4\d\d|5\d\d/.test(detail)) reason = "服务返回 " + detail;
+    const d = String(detail || "");
+    let reason;
+    if (/451/.test(d)) reason = "仅限中国大陆网络(HTTP 451)";
+    else if (/audio play error/i.test(d)) reason = "浏览器拦截了播放(自动播放策略)";
+    else if (/Failed to fetch|NetworkError|network/i.test(d)) reason = "无法连接语音服务(网络/跨域)";
+    else if (/401|403|unauthorized|Forbidden/i.test(d)) reason = "密钥无效/未授权";
+    else if (/4\d\d|5\d\d/.test(d)) reason = "服务返回 " + d.trim().slice(0, 80);
+    else reason = "网络或服务异常" + (d ? "（" + d.trim().slice(0, 60) + "）" : "");
     try {
       if (typeof window !== "undefined" && typeof window.toast === "function") {
         window.toast("真实语音未启用：" + reason + "，已用浏览器原生语音");
@@ -199,8 +203,9 @@
     });
     if (!r.ok) {
       let msg = "";
-      try { const j = await r.json(); msg = j.error || JSON.stringify(j); } catch (e) { try { msg = await r.text(); } catch (_) {} }
-      throw new Error(msg || ("HTTP " + r.status));
+      try { const j = await r.json(); msg = j.error || j.message || JSON.stringify(j); } catch (e) { try { msg = await r.text(); } catch (_) {} }
+      // 关键：强制把 HTTP 状态码带进错误信息，避免 stepfun 错误体不含字面 451 时判断丢失
+      throw new Error("stepfun HTTP " + r.status + (msg ? " - " + msg : ""));
     }
     const blob = await r.blob();
     if (!blob || !blob.size) throw new Error("empty audio");
