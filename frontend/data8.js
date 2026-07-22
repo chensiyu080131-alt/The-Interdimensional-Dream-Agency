@@ -1014,3 +1014,137 @@ const PARALLEL_SAMPLES = {
     { q: "如果我把所有财产都交给别人保管呢？", a: "防骗不是'不碰钱'，而是'学会判断'——过度恐惧和过度信任，是同一枚硬币的两面。" },
   ],
 };
+
+/* ===================== 普通人 NPC 池（V9.2 模糊视线机制）=====================
+ * 用途：每局游戏随机抽 2-3 个混入联系人列表，让玩家在一堆"日常聊天"里
+ *       识别出真正的骗子，而非一上来就知道谁是要对付的人。
+ * 设计原则：
+ *   1) 人设接地气（同事/老同学/外卖员等），头像色用偏冷的中性色（区别于骗子的红/暖色）
+ *   2) 话题永远围绕日常生活，绝口不提投资/转账/理财/内部消息
+ *   3) 玩家主动发消息时，按关键词匹配简短回复（不调 AI，纯本地脚本）
+ *   4) type="civilian"，不参与换号察觉、不被标记为骗子时算"误判"
+ * 字段：key/name/role/color/avatar/tagline/topics(主动联系预设)/replies(关键词→回复)
+ */
+const CIVILIANS = [
+  {
+    key: "colleague_xiaowang", name: "小王", role: "同事", color: "#7F8C8D", avatar: "王",
+    tagline: "隔壁工位的实习生",
+    topics: [
+      { text: "哥，下午那个会要准备啥？", icon: "📋", phase: "工作" },
+      { text: "中午一起点外卖？", icon: "🍱", phase: "午饭" },
+      { text: "打印机又卡纸了……救命", icon: "🖨️", phase: "求助" },
+    ],
+    replies: {
+      default: { text: "好嘞，明白！", phase: "回应" },
+      "外卖|午饭|吃饭": { text: "行啊，我看看美团有啥优惠。你想吃啥？", phase: "午饭" },
+      "打印|卡纸": { text: "哈哈又卡了？我来帮你看看，老问题了。", phase: "帮忙" },
+      "开会|会议": { text: "我也是刚收到议程，据说主要讲Q3的KPI。", phase: "工作" },
+    },
+  },
+  {
+    key: "classmate_ahao", name: "阿豪", role: "老同学", color: "#5D6D7E", avatar: "豪",
+    tagline: "高中同学群最活跃的那个",
+    topics: [
+      { text: "周末同学聚会来不？", icon: "🍻", phase: "聚会" },
+      { text: "你家娃上哪个幼儿园？", icon: "👶", phase: "家常" },
+      { text: "推荐个好看的电影呗", icon: "🎬", phase: "闲聊" },
+    ],
+    replies: {
+      default: { text: "哈哈好久没聊了！最近咋样？", phase: "寒暄" },
+      "聚会|聚一聚": { text: "来啊必须来，老张说他请客。周六晚上海底捞？", phase: "聚会" },
+      "娃|孩子|幼儿园": { text: "我家上的公办，离家近。现在好幼儿园太难抢了。", phase: "家常" },
+      "电影|剧|推荐": { text: "最近那个《孤注一掷》看了吗？讲诈骗的，挺震撼。", phase: "闲聊" },
+    },
+  },
+  {
+    key: "delivery_zhang", name: "张师傅", role: "外卖员", color: "#95A5A6", avatar: "送",
+    tagline: "经常给你送餐的小哥",
+    topics: [
+      { text: "到了，放前台还是下来拿？", icon: "🛵", phase: "送餐" },
+      { text: "今天电梯坏了，我爬了8楼……", icon: "😰", phase: "吐槽" },
+      { text: "给个五星好评呗亲", icon: "⭐", phase: "求好评" },
+    ],
+    replies: {
+      default: { text: "祝您用餐愉快，记得好评哦！", phase: "客套" },
+      "好评|五星|星": { text: "谢谢老板！您人真好，下次还给您送。", phase: "感谢" },
+      "辛苦|谢谢|感谢": { text: "不辛苦不辛苦，应该的。您慢用！", phase: "客套" },
+      "小费|红包": { text: "哎呀这怎么好意思，谢谢老板！", phase: "感谢" },
+    },
+  },
+  {
+    key: "express_li", name: "李姐快递", role: "快递员", color: "#7FB3D5", avatar: "递",
+    tagline: "菜鸟驿站的老板娘",
+    topics: [
+      { text: "你的包裹到驿站了，记得取", icon: "📦", phase: "取件" },
+      { text: "今天大促，快递堆成山了", icon: "🏔️", phase: "闲聊" },
+      { text: "你那个大件我帮你放门口了", icon: "🚪", phase: "送货" },
+    ],
+    replies: {
+      default: { text: "嗯嗯，包裹我看着呢，放心。", phase: "回应" },
+      "取件|拿|包裹": { text: "来吧来吧，今天9点关门，别太晚哈。", phase: "取件" },
+      "大件|重|门口": { text: "那个箱子死沉，我跟我老公俩人抬上去的。", phase: "送货" },
+      "谢谢|辛苦": { text: "客气啥，都是老邻居了。", phase: "客套" },
+    },
+  },
+  {
+    key: "landlord_zhao", name: "赵阿姨", role: "房东", color: "#AEB6BF", avatar: "房",
+    tagline: "热心的退休房东",
+    topics: [
+      { text: "这个月房租转一下哈", icon: "💰", phase: "房租" },
+      { text: "楼下管道漏水，明天修理工来", icon: "🔧", phase: "维修" },
+      { text: "闺女，做多了饺子给你送点", icon: "🥟", phase: "关心" },
+    ],
+    replies: {
+      default: { text: "好好好，有事随时跟阿姨说。", phase: "客套" },
+      "房租|租金|转账": { text: "嗯嗯我这就转。对了下个月房租要涨200，物业涨了，理解一下哈。", phase: "房租" },
+      "漏水|修|维修": { text: "明天上午10点师傅上门，你在家吗？不在我帮你盯着。", phase: "维修" },
+      "饺子|吃的|送": { text: "韭菜鸡蛋的，你爱吃的。放门口了哈，趁热。", phase: "关心" },
+    },
+  },
+  {
+    key: "coach_lin", name: "林教练", role: "健身教练", color: "#85929E", avatar: "练",
+    tagline: "健身房私教",
+    topics: [
+      { text: "今天练腿，来不？", icon: "🏋️", phase: "约课" },
+      { text: "你这周才来一次，偷懒了啊", icon: "😤", phase: "督促" },
+      { text: "蛋白粉要不要囤一罐？", icon: "💪", phase: "推销" },
+    ],
+    replies: {
+      default: { text: "加油，坚持就是胜利！", phase: "鼓励" },
+      "练腿|训练|约课": { text: "来吧！今天深蹲+硬拉，准备好。", phase: "约课" },
+      "偷懒|没来": { text: "下次可不许啊，肌肉是有记忆的，断了就退步。", phase: "督促" },
+      "蛋白粉|补剂|买": { text: "店里有活动，买二送一，你要不看看？不买也没事。", phase: "推销" },
+    },
+  },
+  {
+    key: "blind_date", name: "相亲对象", role: "相亲", color: "#BB8FCE", avatar: "❤",
+    tagline: "妈妈介绍的，还没见过面",
+    topics: [
+      { text: "阿姨说你是个挺靠谱的人", icon: "😊", phase: "破冰" },
+      { text: "周末有空见一面吗？", icon: "☕", phase: "约见" },
+      { text: "你喜欢看电影还是户外？", icon: "🎭", phase: "了解" },
+    ],
+    replies: {
+      default: { text: "嗯嗯，我也觉得可以多了解了解。", phase: "客套" },
+      "见面|约会|咖啡": { text: "好啊，周六下午星巴克？我请。", phase: "约见" },
+      "电影|户外|爱好": { text: "我比较喜欢户外，爬山徒步那些。你呢？", phase: "了解" },
+      "工作|收入|工资": { text: "嗯……这个见面再聊？哈哈有点不好意思。", phase: "回避" },
+    },
+  },
+  {
+    key: "community_police", name: "片警老周", role: "社区民警", color: "#5499C7", avatar: "警",
+    tagline: "负责你这片的社区警察",
+    topics: [
+      { text: "近期辖区有诈骗案，注意防范", icon: "🚨", phase: "提醒" },
+      { text: "下载国家反诈中心App了吗？", icon: "📱", phase: "宣传" },
+      { text: "户口本核对一下，方便吗？", icon: "📋", phase: "公务" },
+    ],
+    replies: {
+      default: { text: "有什么情况随时联系所里，96110记一下。", phase: "公务" },
+      "诈骗|骗|可疑": { text: "最近冒充客服的很多，凡是让你转账的都是骗子，记住了。", phase: "提醒" },
+      "App|反诈|下载": { text: "国家反诈中心App，应用商店搜就有，能拦诈骗电话。", phase: "宣传" },
+      "户口|核对|登记": { text: "方便的话明天上午来所里一趟，5分钟就完事。", phase: "公务" },
+    },
+  },
+];
+

@@ -556,6 +556,21 @@ function startGame() {
   S.story.tasks.forEach(t => { S.tasks[t.id] = (t.cond ? "pending" : "active"); });
   S.convs = {};
   S.story.actors.forEach(a => { S.convs[a] = { unread: false, messages: [] }; });
+  // V9.2 模糊视线：随机抽 2-3 个普通人 NPC 混入联系人列表（含独立 conv）
+  // 把它们追加进 S.story.actors（副本，不污染原数据）+ 建 conv + 给一条欢迎消息
+  S.civiliansInGame = [];
+  if (typeof CIVILIANS !== "undefined" && Array.isArray(CIVILIANS) && CIVILIANS.length > 0) {
+    // 同步把普通人塞进 ACTORS 表（运行时扩展），让 renderConvList/openConversation 能找到
+    const pool = shuffle(CIVILIANS).slice(0, 2 + (Math.random() < 0.5 ? 0 : 1)); // 2~3 个
+    pool.forEach(c => {
+      ACTORS[c.key] = { name: c.name, type: "civilian", role: c.role, color: c.color, avatar: c.avatar, tagline: c.tagline };
+      if (!S.story.actors.includes(c.key)) S.story.actors.push(c.key);
+      S.convs[c.key] = { unread: false, messages: [{ who: "ai", text: c.topics[0].text, psy: c.topics[0].phase }] };
+      S.civiliansInGame.push(c.key);
+    });
+  }
+  // V9.2 标记骗子机制：记录玩家指控 { convKey: true }，结局时统计识别准确率
+  S.accused = {};
   S.chatIdentity = (MASIAS[S.idKey] && MASIAS[S.idKey][0]) ? MASIAS[S.idKey][0].key : null;
   S.maskSwitchCount = {}; S.maskUsedPerNPC = {}; S.totalMaskSwitches = 0; S.maskSwitchBlocked = false;
 
@@ -736,11 +751,15 @@ function showIdentitySwitcher(fromAuto) {
     </div>`;
   }).join("");
 
-  // 点击卡片换马甲
-  grid.querySelectorAll(".sw-card").forEach(card => {
-    card.addEventListener("click", () => {
+  // 点击卡片换马甲 —— 用事件委托，只绑一次（避免每次打开 overlay 重复绑定导致的内存泄漏与卡顿）
+  if (!grid.__swDelegated) {
+    grid.__swDelegated = true;
+    grid.addEventListener("click", (e) => {
+      const card = e.target.closest(".sw-card");
+      if (!card) return;
       const newKey = card.dataset.alias;
-      if (newKey === S.chatIdentity) { hide("switcher-overlay"); return; } // 同一个马甲不处理
+      if (!newKey) return;
+      if (newKey === S.chatIdentity) { hide("switcher-overlay"); return; }
       if (S.maskSwitchBlocked) {
         toast("🚫 换号已被锁定，对方已经起了极大的疑心！");
         return;
@@ -752,19 +771,22 @@ function showIdentitySwitcher(fromAuto) {
       hide("switcher-overlay");
 
       const newAlias = getChatAlias();
+      const actor2 = ACTORS[S.activeConv];
+      const isDangerNPC2 = actor2 && (actor2.type === "target" || actor2.type === "accomplice");
+      const msgsCheck2 = S.activeConv && S.convs[S.activeConv] ? S.convs[S.activeConv].messages : [];
+      const hasChatted2 = msgsCheck2.some(m => m.who === "me");
 
-      // 检测是否被 NPC 发现
       const detection = checkMaskDetection(oldKey, newKey);
       if (detection) {
         toast(detection.toastMsg);
         injectNPCReaction(detection);
       } else {
-        const safe = !hasChatted || !isDangerNPC;
+        const safe = !hasChatted2 || !isDangerNPC2;
         toast("🎭 已换上「" + newAlias.name + "」" + (safe ? "——还没聊过天，切号完全安全。" : "，对方目前没有察觉。"));
       }
       refreshChatBubbles();
     });
-  });
+  }
 
   // 底部状态信息
   const infoArea = $("sw-info-area");
@@ -950,11 +972,13 @@ function renderConvList() {
     const last = c.messages.length ? c.messages[c.messages.length-1].text : a.tagline;
     const row = document.createElement("div");
     row.className = "conv-row" + (k === S.activeConv ? " active" : "");
-    // NPC 类型标签
+    // NPC 类型标签（V9.2: civilian 不显示类型徽章，让玩家自己判断）
     const typeLabels = { target: "🎯 目标", accomplice: "👥 同伙", handler: "📡 联络", victim: "🆘 受害者", informant: "👤 线人" };
     const typeBadge = typeLabels[a.type] || "";
+    // V9.2 玩家标记状态：被标记的联系人显示红色 ⛔ 角标
+    const accusedMark = (S.accused && S.accused[k]) ? '<span class="conv-accused">⛔</span>' : '';
     row.innerHTML = `
-      <div class="conv-av" style="background:${a.color}">${a.portrait ? '<img class="av-img" src="' + a.portrait + '">' : a.avatar}</div>
+      <div class="conv-av" style="background:${a.color}">${a.portrait ? '<img class="av-img" src="' + a.portrait + '">' : a.avatar}${accusedMark}</div>
       <div class="conv-mid">
         <div class="conv-name">${a.name} <span class="conv-role">${a.role}</span><span class="conv-type">${typeBadge}</span></div>
         <div class="conv-last">${last}</div>
@@ -975,6 +999,8 @@ function openConversation(key, silent) {
   $("chat-sub").textContent = a.role + " · " + a.tagline;
   $("chat-av").innerHTML = a.portrait ? '<img class="av-img" src="' + a.portrait + '">' : a.avatar;
   $("chat-av").style.background = a.portrait ? "transparent" : a.color;
+  // V9.2 切换对话时同步标记按钮状态
+  updateAccuseBadge();
   const area = $("chat-area");
   area.innerHTML = "";
   // NPC 切换 → 更新场景条
@@ -1049,6 +1075,16 @@ function renderProactiveOptions(npcKey) {
       { text: "在吗？刚才有点事。", icon: "📱", phase: "日常" },
       { text: "继续说，我在听。", icon: "👂", phase: "继续" },
     ];
+  } else if (type === "civilian") {
+    // V9.2 普通人 NPC：用 CIVILIANS 池里的话题，纯日常，绝不提钱/投资
+    const civDef = (typeof CIVILIANS !== "undefined" ? CIVILIANS.find(c => c.key === npcKey) : null);
+    if (civDef && civDef.topics) {
+      contextText = `${npc.name}（${npc.role}）发来消息。`;
+      presets = civDef.topics.slice();
+    } else {
+      contextText = `${npc.name}似乎想跟你聊两句。`;
+      presets = [{ text: "在吗？", icon: "👋", phase: "打招呼" }];
+    }
   }
 
   // 上下文提示
@@ -1079,7 +1115,7 @@ function renderProactiveOptions(npcKey) {
   // 自由输入框
   const row = document.createElement("div");
   row.className = "free-row";
-  row.innerHTML = `<input class="free-input" id="free-input" placeholder="输入消息发给${npc.name}……"/><button class="free-send" id="free-send">发送</button>`;
+  row.innerHTML = `<input class="free-input" id="free-input" placeholder="输入消息发给${npc.name}……" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="text"/><button class="free-send" id="free-send">发送</button>`;
   bar.appendChild(row);
   const sendBtn = row.querySelector("#free-send");
   const inputEl = row.querySelector("#free-input");
@@ -1099,6 +1135,27 @@ async function handleProactiveContact(npcKey, text) {
   const npc = ACTORS[npcKey];
   const type = npc ? npc.type : "other";
   showTyping();
+
+  // V9.2 普通人 NPC：不调 AI，直接用本地关键词回复（更快、更可控、不耗 API 额度）
+  if (type === "civilian") {
+    const civDef = (typeof CIVILIANS !== "undefined" ? CIVILIANS.find(c => c.key === npcKey) : null);
+    setTimeout(() => {
+      hideTyping();
+      let reply = civDef && civDef.replies ? civDef.replies.default : { text: "嗯嗯。", phase: "回应" };
+      if (civDef && civDef.replies) {
+        for (const kw of Object.keys(civDef.replies)) {
+          if (kw === "default") continue;
+          const re = new RegExp(kw.split("|").map(k => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"));
+          if (re.test(text)) { reply = civDef.replies[kw]; break; }
+        }
+      }
+      pushMessageFinal(npcKey, "ai", reply.text, reply.phase);
+      // 普通人偶尔触发二次话题（增加真实感），但绝不提投资/转账
+      const node = S.story.nodes[S.node];
+      if (!node || node.speaker !== npcKey) renderProactiveOptions(npcKey);
+    }, 500 + Math.random() * 400);
+    return;
+  }
 
   // 尝试使用 AI（对所有 NPC 类型）
   let aiReply = null;
@@ -1337,7 +1394,7 @@ function renderOptions(node) {
   if (!node.options.some(o => o.ending)) {
     const row = document.createElement("div");
     row.className = "free-row";
-    row.innerHTML = `<input class="free-input" id="free-input" placeholder="也可自己打字回复……"/><button class="free-send" id="free-send">发送</button>`;
+    row.innerHTML = `<input class="free-input" id="free-input" placeholder="也可自己打字回复……" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="text"/><button class="free-send" id="free-send">发送</button>`;
     bar.appendChild(row);
     $("free-send").addEventListener("click", () => {
       const v = $("free-input").value.trim();
@@ -2252,6 +2309,51 @@ $("nav-gallery").addEventListener("click", () => { audioSFX("panelOpen"); render
 // 切号按钮
 $("switcher-badge").addEventListener("click", () => { audioSFX("click"); showIdentitySwitcher(false); });
 $("switcher-cancel").addEventListener("click", () => { audioSFX("click"); hide("switcher-overlay"); });
+/* V9.2 标记骗子按钮 */
+$("accuse-badge").addEventListener("click", () => { audioSFX("click"); toggleAccuse(); });
+
+/** 切换"标记为骗子"状态，并给即时反馈 */
+function toggleAccuse() {
+  if (!S.activeConv || S.ending) return;
+  const key = S.activeConv;
+  const actor = ACTORS[key];
+  if (!actor) return;
+  S.accused = S.accused || {};
+  const wasAccused = !!S.accused[key];
+  S.accused[key] = !wasAccused; // toggle
+  updateAccuseBadge();
+  if (!wasAccused) {
+    // 本次是"标记为骗子"
+    if (actor.type === "target" || actor.type === "accomplice") {
+      const bonus = 8;
+      S.awareness = Math.min(100, (S.awareness || 0) + bonus);
+      toast("✅ 准确识别！" + actor.name + "确实是骗子。清醒度 +" + bonus);
+      audioSFX("success");
+    } else if (actor.type === "civilian") {
+      const penalty = 5;
+      S.awareness = Math.max(0, (S.awareness || 0) - penalty);
+      toast("❌ 误判！" + actor.name + "只是个普通人，不是骗子。清醒度 -" + penalty);
+    } else {
+      // handler/victim/informant
+      const penalty = 3;
+      S.awareness = Math.max(0, (S.awareness || 0) - penalty);
+      toast("⚠ " + actor.name + "不是骗子（" + actor.role + "）。清醒度 -" + penalty);
+    }
+    updateTopbar();
+  } else {
+    toast("已取消对" + actor.name + "的标记");
+  }
+}
+
+/** 根据 S.accused 更新标记按钮的视觉状态 */
+function updateAccuseBadge() {
+  const badge = $("accuse-badge");
+  if (!badge) return;
+  const accused = S.accused && S.activeConv && S.accused[S.activeConv];
+  if (accused) badge.classList.add("accused");
+  else badge.classList.remove("accused");
+}
+
 $("convlist-close").addEventListener("click", () => hide("convlist-overlay"));
 $("task-close").addEventListener("click", () => hide("task-overlay"));
 $("status-close").addEventListener("click", () => hide("status-overlay"));
