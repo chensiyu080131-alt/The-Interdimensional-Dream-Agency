@@ -65,6 +65,7 @@ app.use("/api/chat", chatRouter);
 app.use("/api/ending", endingRouter);
 app.use("/api/track", analyticsRouter);
 app.post("/api/tts", stepTts);
+app.get("/api/tts-voices", stepTts.voices);
 
 // 根路径健康检查
 app.get("/", (req, res) => {

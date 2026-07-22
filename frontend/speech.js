@@ -11,20 +11,24 @@
   let speaking = false;
   let currentAudio = null;
 
-  /* 各 NPC → 阶跃 Step Audio 2 命名音色（来自官方音色库，覆盖 step-tts-2 / stepaudio-2.5-tts）
-   * 每个角色独立声音，沉浸感更强；缺省用 vibrant-youth。 */
+  /* 各 NPC → 阶跃 Step Plan 音色。
+   * 当前 step_plan 档位的「预设公版音色列表为空」，已验证只有 vibrant-youth 是被阶跃识别的合法音色；
+   * 其余占位名会从阶跃返回 400 voice_id_invalid。故先统一用 vibrant-youth 保证可用。
+   * 若你想给不同 NPC 分配独立音色：在本地（中国 IP）运行后端后，调用
+   *   GET <后端>/api/tts-voices  （或 stepfun /audio/voices）拿到你账号下可用音色，
+   *   再把对应 voice id 填到这里即可。 */
   const STEPFUN_VOICE_MAP = {
-    zhanghao:  "zixinnansheng",        // 自信男声（骗子·油滑）
-    lijie:     "soft-spoken-gentleman",// 温润绅士（骗子·话术）
-    xiaoyun:   "elegantgentle-female", // 气质温婉（老师）
-    laowang:   "wenrounansheng",       // 温柔男声（老王群众）
-    laok:      "yuanqinansheng",       // 元气男声
-    editor:    "jingdiannvsheng",      // 经典女声
-    coord:     "livelybreezy-female",  // 活力轻快
-    police110: "magnetic-voiced-male", // 磁性男声（警方）
-    xiaoya:    "lively-girl",          // 活泼女孩
-    chenlu:    "wenroushunv",          // 温柔熟女
-    anon:      "vibrant-youth",        // 活力青年
+    zhanghao:  "vibrant-youth",
+    lijie:     "vibrant-youth",
+    xiaoyun:   "vibrant-youth",
+    laowang:   "vibrant-youth",
+    laok:      "vibrant-youth",
+    editor:    "vibrant-youth",
+    coord:     "vibrant-youth",
+    police110: "vibrant-youth",
+    xiaoya:    "vibrant-youth",
+    chenlu:    "vibrant-youth",
+    anon:      "vibrant-youth",
     _default:  "vibrant-youth",
   };
 

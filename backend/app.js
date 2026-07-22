@@ -1038,6 +1038,7 @@ function fallbackReply(round, emo, act, targetRole = "scammer") {
  * ============================================================ */
 const stepTts = require("./tts");
 app.post("/api/tts", stepTts);
+app.get("/api/tts-voices", stepTts.voices);
 
 /* ============================================================
  * 启动服务
