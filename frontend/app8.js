@@ -860,6 +860,65 @@ function applyActTheme(actKey) {
   $("act-sub").textContent = a.sub;
 }
 
+/* ================ V9.2 章节幕间转场（方案 B）================
+ * 在 playNode 检测到 act 变化时触发，全屏过场卡 1.2s 淡入淡出，
+ * 3 秒后或点击任意位置自动消失。比 appendAmbient 的环境消息更有戏剧感。
+ */
+let __actTransitionTimer = null;
+const __ACT_ROMAN = ["", "I", "II", "III", "IV", "V", "VI", "VII"];
+function showActTransition(actKey, opts) {
+  const a = ACTS[actKey];
+  if (!a) return;
+  opts = opts || {};
+  const overlay = $("act-transition");
+  if (!overlay) return;
+
+  // 填充内容
+  $("at-n").textContent = "ACT " + (__ACT_ROMAN[a.n] || a.n);
+  $("at-name").textContent = a.name;
+  $("at-sub").textContent = a.sub;
+  $("at-name").style.color = "#fff";
+  $("at-n").style.color = a.accent;
+  document.documentElement.style.setProperty("--hl", a.accent);
+  // 背景图（若资源缺失则纯黑）
+  const bg = $("at-bg");
+  if (a.bg) { bg.style.background = `url('${a.bg}')`; bg.style.backgroundSize = "cover"; bg.style.backgroundPosition = "center"; }
+  else { bg.style.background = "transparent"; }
+  // 天数（可选）
+  $("at-day").textContent = opts.day ? `第 ${opts.day} 天` : "";
+  // 证据数（可选）
+  const evCount = Object.keys(S.evidenceFrags || {}).length;
+  const evTotal = S.evidenceFragTotal || 6;
+  $("at-evidence").textContent = evCount > 0 ? `已收集证据 ${evCount}/${evTotal}` : "";
+
+  // 音效（非首次进入希望幕时才播，避免开局就被吓）
+  if (actKey !== "hope" || opts.force) audioSFX("panelOpen");
+
+  // 显示
+  overlay.classList.remove("hide-out");
+  overlay.classList.add("show");
+
+  // 自动消失（3 秒）
+  if (__actTransitionTimer) clearTimeout(__actTransitionTimer);
+  __actTransitionTimer = setTimeout(() => hideActTransition(), opts.duration || 3000);
+}
+function hideActTransition() {
+  const overlay = $("act-transition");
+  if (!overlay || !overlay.classList.contains("show")) return;
+  overlay.classList.add("hide-out");
+  setTimeout(() => {
+    overlay.classList.remove("show");
+    overlay.classList.remove("hide-out");
+  }, 600);
+  if (__actTransitionTimer) { clearTimeout(__actTransitionTimer); __actTransitionTimer = null; }
+}
+// 点击任意位置跳过转场
+document.addEventListener("DOMContentLoaded", () => {
+  const ov = $("act-transition");
+  if (ov) ov.addEventListener("click", hideActTransition);
+});
+
+
 /* ---------------- 场景条 — 紧凑卡片式渲染 ---------------- */
 // 身份级初始场景（游戏启动时用）
 const SCENE_META = {
@@ -1258,13 +1317,17 @@ function playNode(nodeId) {
     const moods = ['', '一切才刚刚开始……', '线索逐渐浮现，但也更危险了。', '时间不多了，每一步都很关键。', '你感到呼吸越来越沉重。', '最后一搏，没有回头路了。', '结局即将揭晓。', '故事走到了终点。'];
     appendAmbient(`📅 ${label} — ${moods[node.day] || ''}`);
   }
-  // 幕切换 → 环境消息
+  // 幕切换 → 环境消息 + V9.2 全屏转场卡
   if (node.act) {
     const prevAct = S.act;
     applyActTheme(node.act);
     if (node.act !== prevAct) {
       const a = ACTS[node.act];
-      if (a) appendAmbient(`🎬 第 ${a.n} 幕 · ${a.name} — ${a.sub}`);
+      if (a) {
+        appendAmbient(`🎬 第 ${a.n} 幕 · ${a.name} — ${a.sub}`);
+        // V9.2 章节幕间转场卡（方案 B）：全屏过场，3s 自动消失
+        showActTransition(node.act, { day: node.day || S.day });
+      }
     }
   }
   const spk = node.speaker;
@@ -2049,6 +2112,7 @@ function buildCollapseSeq(key) {
 }
 function runCollapse(end) {
   applyActTheme("collapse");
+  showActTransition("collapse");
   audioBGM("collapse");
   audioSFX("sting");
   const seq = buildCollapseSeq(S.endingKey);
@@ -2075,6 +2139,7 @@ function runCollapse(end) {
 /* ---------------- 第三幕·废墟（四行动） ---------------- */
 function runRuins(end) {
   applyActTheme("ruins");
+  showActTransition("ruins");
   audioBGM("ruins");
   const box = $("ruins-list");
   box.innerHTML = RUINS_ACTIONS.map(a => {
@@ -2107,6 +2172,7 @@ $("ruins-close").addEventListener("click", () => hide("ruins-overlay"));
 /* ---------------- 第四幕·回放（时间线 + 平行宇宙） ---------------- */
 function runReplay(end) {
   applyActTheme("replay");
+  showActTransition("replay");
   audioBGM("replay");
   $("replay-end-title").textContent = end.title;
   $("replay-end-text").textContent = end.text;
@@ -2182,6 +2248,7 @@ $("parallel-close").addEventListener("click", () => hide("parallel-overlay"));
 /* ---------------- 第五幕·盾牌（报告） ---------------- */
 function runShield() {
   applyActTheme("shield");
+  showActTransition("shield");
   audioBGM("shield");
   const id = IDENTITIES[S.idKey];
 

@@ -574,6 +574,24 @@
 
     /* 进场动画 */
     @keyframes optIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+
+    /* V9.2 章节幕间转场卡 —— 方案 B */
+    #act-transition{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;
+      background:rgba(0,0,0,.92);overflow:hidden;cursor:pointer;}
+    #act-transition.show{display:flex;animation:actFadeIn .6s ease both;}
+    #act-transition.hide-out{animation:actFadeOut .6s ease both;}
+    @keyframes actFadeIn{from{opacity:0;}to{opacity:1;}}
+    @keyframes actFadeOut{from{opacity:1;}to{opacity:0;}}
+    #act-transition .at-bg{position:absolute;inset:0;background-size:cover;background-position:center;opacity:.32;filter:blur(2px);}
+    .at-card{text-align:center;padding:0 32px;position:relative;z-index:2;animation:atCardIn .8s .15s ease both;}
+    @keyframes atCardIn{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:none;}}
+    .at-n{font-size:12px;letter-spacing:6px;font-weight:500;color:var(--hl,#FF6B35);margin-bottom:10px;text-transform:uppercase;}
+    .at-name{font-size:42px;font-weight:500;color:#fff;margin-bottom:8px;letter-spacing:2px;}
+    .at-sub{font-size:15px;color:rgba(255,255,255,.7);margin-bottom:20px;font-weight:400;}
+    .at-line{width:48px;height:2px;background:var(--hl,#FF6B35);margin:0 auto 20px;}
+    .at-day{font-size:14px;color:rgba(255,255,255,.55);font-weight:400;}
+    .at-evidence{font-size:12px;color:rgba(255,255,255,.4);margin-top:14px;font-weight:400;}
+    .at-skip{position:absolute;bottom:32px;left:50%;transform:translateX(-50%);font-size:11px;color:rgba(255,255,255,.35);font-weight:400;letter-spacing:1px;}
   </style>
 </head>
 <body>
@@ -887,6 +905,20 @@
       <div id="ev-content-box"></div>
     </div></div>
 
+  </div>
+
+  <!-- V9.2 章节幕间转场卡（方案 B） -->
+  <div id="act-transition">
+    <div class="at-bg" id="at-bg"></div>
+    <div class="at-card">
+      <div class="at-n" id="at-n">ACT I</div>
+      <div class="at-name" id="at-name">希望</div>
+      <div class="at-sub" id="at-sub">建立信任，放下防备</div>
+      <div class="at-line"></div>
+      <div class="at-day" id="at-day"></div>
+      <div class="at-evidence" id="at-evidence"></div>
+    </div>
+    <div class="at-skip">点击任意位置继续</div>
   </div>
 
   <script src="audio.js"></script>
